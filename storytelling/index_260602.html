@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8' />
+    <title>Berlins DNA in Straßennamen</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src="https://unpkg.com/scrollama@3.2.0/build/scrollama.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0f1113;
+            --panel: rgba(12, 14, 16, 0.84);
+            --panel-strong: rgba(8, 9, 11, 0.92);
+            --line: rgba(255, 255, 255, 0.1);
+            --text: #f4f4f1;
+            --muted: #b8b8b0;
+            --accent: #ff444b;
+            --gold: #d2a654;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Georgia, "Times New Roman", serif;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        #chrome {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        a,
+        a:hover,
+        a:visited {
+            color: var(--text);
+        }
+
+        #map-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 68, 75, 0.18), transparent 28%),
+                radial-gradient(circle at 80% 0%, rgba(210, 166, 84, 0.14), transparent 24%),
+                #111416;
+        }
+
+        #map {
+            position: absolute;
+            inset: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+            margin: 0 10px 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(10, 12, 14, 0.78);
+            backdrop-filter: blur(10px);
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact {
+            color: var(--text);
+            padding-right: 0;
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+            display: block;
+            background-color: transparent;
+            filter: invert(1) brightness(1.25);
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+            display: none !important;
+        }
+
+        #intro-street-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            opacity: 0;
+            transition: opacity 320ms ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        body.intro-active #intro-street-overlay {
+            opacity: 0.96;
+        }
+
+        .map-overlay {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background:
+                linear-gradient(90deg, rgba(8, 9, 11, 0.72) 0%, rgba(8, 9, 11, 0.38) 30%, rgba(8, 9, 11, 0) 58%),
+                linear-gradient(0deg, rgba(8, 9, 11, 0.76) 0%, rgba(8, 9, 11, 0) 38%);
+        }
+
+        body.intro-active .map-overlay {
+            background:
+                radial-gradient(circle at 50% 45%, rgba(8, 9, 11, 0.04) 0%, rgba(8, 9, 11, 0.12) 62%, rgba(8, 9, 11, 0.28) 100%),
+                linear-gradient(0deg, rgba(8, 9, 11, 0.34) 0%, rgba(8, 9, 11, 0) 34%);
+        }
+
+        #story {
+            position: relative;
+            z-index: 10;
+        }
+
+        body.map-editing #story {
+            pointer-events: none;
+        }
+
+        #topbar-title {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            width: min(760px, calc(100vw - 48px));
+            padding: 18px 22px;
+            border: 1px solid var(--line);
+            background: rgba(10, 12, 14, 0.78);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            pointer-events: auto;
+            opacity: 1;
+            transition: opacity 240ms ease, visibility 240ms ease;
+            visibility: visible;
+        }
+
+        #topbar-title.is-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        body.map-editing #topbar-title {
+            pointer-events: none;
+            opacity: 0.28;
+        }
+
+        #topbar-title h1,
+        #topbar-title h2,
+        #topbar-title p {
+            margin: 0;
+            padding: 0;
+            text-align: left;
+        }
+
+        #topbar-title h1 {
+            font-size: clamp(24px, 4vw, 42px);
+            line-height: 0.92;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            text-align: center;
+        }
+
+        #topbar-title h2,
+        #topbar-title p {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        #features {
+            padding-top: 100px;
+            padding-bottom: 6vh;
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
+        .step {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 120px 24px 56px;
+            opacity: 0.22;
+            transition: opacity 260ms ease;
+        }
+
+        .step.active {
+            opacity: 1;
+        }
+
+        .lefty {
+            justify-content: flex-start;
+        }
+
+        .centered,
+        .fully {
+            justify-content: center;
+        }
+
+        .righty {
+            justify-content: flex-end;
+        }
+
+        .step > div {
+            width: min(490px, calc(100vw - 56px));
+            border: 1px solid var(--line);
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            box-shadow: var(--shadow);
+            transform: translateY(18px);
+            opacity: 0.76;
+            transition:
+                transform 260ms ease,
+                opacity 260ms ease,
+                border-color 260ms ease;
+        }
+
+        .step.active > div {
+            transform: translateY(0);
+            opacity: 1;
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .lefty > div,
+        .centered > div,
+        .fully > div {
+            margin-left: clamp(28px, 4vw, 72px);
+            margin-right: auto;
+        }
+
+        .righty > div {
+            margin-right: clamp(28px, 4vw, 72px);
+        }
+
+        .light,
+        .dark {
+            color: var(--text);
+            background: transparent;
+        }
+
+        .card {
+            padding: clamp(16px, 2.4vw, 28px);
+        }
+
+        .card h3,
+        .card p {
+            margin: 0 0 16px;
+        }
+
+        .card h3 {
+            font-size: clamp(22px, 2.6vw, 32px);
+            line-height: 1.02;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card p {
+            color: var(--text);
+            font-size: clamp(16px, 1.28vw, 19px);
+            line-height: 1.38;
+            text-align: left;
+        }
+
+        .card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .card p b,
+        .card p strong {
+            color: var(--accent);
+            font-weight: 400;
+        }
+
+        .card img {
+            width: 100%;
+            display: block;
+            margin: 0 0 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        #footer {
+            position: relative;
+            z-index: 15;
+            width: min(720px, calc(100vw - 64px));
+            margin: 0 0 40px clamp(52px, 6vw, 96px);
+            padding: 18px 22px;
+            border: 1px solid var(--line);
+            background: rgba(10, 12, 14, 0.78);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            line-height: 1.5;
+            font: 12px/1.4 system-ui, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        #footer p {
+            margin: 0;
+        }
+
+        @media (max-width: 900px) {
+            .map-overlay {
+                background:
+                    linear-gradient(0deg, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.32) 28%, rgba(8, 9, 11, 0) 56%);
+            }
+
+            body.intro-active .map-overlay {
+                background:
+                    radial-gradient(circle at 50% 42%, rgba(8, 9, 11, 0.04) 0%, rgba(8, 9, 11, 0.12) 64%, rgba(8, 9, 11, 0.24) 100%),
+                    linear-gradient(0deg, rgba(8, 9, 11, 0.38) 0%, rgba(8, 9, 11, 0) 30%);
+            }
+
+            #topbar-title {
+                top: 50%;
+                left: 50%;
+                right: auto;
+                transform: translate(-50%, -50%);
+                width: calc(100vw - 28px);
+            }
+
+            .centered,
+            .lefty,
+            .righty,
+            .fully {
+                justify-content: center;
+            }
+
+            .step {
+                align-items: flex-end;
+                padding: 108px 14px 24px;
+            }
+
+            .step > div,
+            .lefty > div,
+            .righty > div,
+            .centered > div,
+            .fully > div,
+            #footer {
+                width: calc(100vw - 28px);
+                margin: 0 auto 24px;
+            }
+
+            .card p {
+                font-size: clamp(17px, 5.1vw, 23px);
+            }
+
+            #footer {
+                font-size: 11px;
+            }
+        }
+
+        /* Fix touch scrolling on mobile */
+        .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan,
+        .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan .maplibregl-canvas {
+            touch-action: unset;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="chrome">
+        <div id="topbar-title">
+            <h1>RENAME IT!</h1>
+            <h2>Berliner Straßennamen im Wandel</h2>
+        </div>
+    </div>
+    <div id="map-shell">
+        <div id="map"></div>
+        <img id="intro-street-overlay" src="./assets/intro-street-network.svg" alt="" />
+        <div class="map-overlay"></div>
+    </div>
+    <div id="story"></div>
+
+    <script src="./config.js"></script>
+    <script>
+        var layerTypes = {
+            'fill': ['fill-opacity'],
+            'line': ['line-opacity'],
+            'circle': ['circle-opacity', 'circle-stroke-opacity'],
+            'symbol': ['icon-opacity', 'text-opacity'],
+            'raster': ['raster-opacity'],
+            'fill-extrusion': ['fill-extrusion-opacity'],
+            'heatmap': ['heatmap-opacity']
+        };
+
+        var alignments = {
+            'left': 'lefty',
+            'center': 'centered',
+            'right': 'righty',
+            'full': 'fully'
+        };
+
+        var basemapRoadCaseLayerIds = [
+            'road_service_case', 'road_minor_case', 'road_sec_case_noramp', 'road_pri_case_ramp',
+            'road_pri_case_noramp', 'road_trunk_case_ramp', 'road_trunk_case_noramp',
+            'road_mot_case_ramp', 'road_mot_case_noramp', 'bridge_service_case',
+            'bridge_minor_case', 'bridge_sec_case', 'bridge_pri_case',
+            'bridge_trunk_case', 'bridge_mot_case'
+        ];
+
+        var basemapRoadFillLayerIds = [
+            'road_service_fill', 'road_minor_fill', 'road_sec_fill_noramp', 'road_pri_fill_ramp',
+            'road_pri_fill_noramp', 'road_trunk_fill_ramp', 'road_trunk_fill_noramp',
+            'road_mot_fill_ramp', 'road_mot_fill_noramp', 'bridge_service_fill',
+            'bridge_minor_fill', 'bridge_sec_fill', 'bridge_pri_fill',
+            'bridge_trunk_fill', 'bridge_mot_fill'
+        ];
+
+        var CAMERA_OVERRIDE_STORAGE_KEY = 'storytelling-map-camera-overrides';
+        var streetHighlightColors = {};
+        var streetGlowLayerIds = {};
+        var streetNamesByLayer = {};
+        var streetBoundsByLayer = {};
+        var highlightedStreetNameSet = new Set();
+        var pruneStreetBranchNameSet = new Set(['Adlergestell', 'Karl-Marx-Allee']);
+        var pruneStreetBranchMaxLengthByName = {
+            'Adlergestell': 90,
+            'Karl-Marx-Allee': 120
+        };
+        var currentChapterIndex = 0;
+        var isMapEditMode = false;
+        var hasInitializedFirstChapter = false;
+        var pendingStreetHighlightChapterId = null;
+        var pendingStreetHighlightTimer = null;
+        var activeStreetHighlightChapterId = null;
+        var activeStreetHighlightStartedAt = 0;
+        var pendingStreetApplyFrame = null;
+        var highlightStreetLayerConfigs = [];
+        var highlightLayersReady = false;
+        var prefetchedTileUrlSet = new Set();
+        var satelliteDataReady = false;
+        var satelliteDataPromise = null;
+        var streetDataReady = false;
+        var streetDataPromise = null;
+        var femaleStreetLayerId = 'female-streets';
+        var maleStreetLayerId = 'male-streets';
+        var femaleStreetSourceId = 'female-streets-source';
+        var maleStreetSourceId = 'male-streets-source';
+        var excludedGenderStreetNamePattern = /^(?:\d|A\s?\d|\d{2,})|\b(?:AS|AD|Einf|Ausf)\b|Hauptfahrbahn|Verbfb/i;
+        var femaleStreetNameParts = new Set([
+            'Adelheid', 'Alice', 'Amalie', 'Anna', 'Antonie', 'Auguste', 'Babette', 'Bella', 'Berta', 'Bertha',
+            'Bettina', 'Betty', 'Cauer', 'Charlotte', 'Christine', 'Clara', 'Dorothea', 'Elfriede', 'Elisabeth',
+            'Elsa', 'Else', 'Emma', 'Eva', 'Flora', 'Frieda', 'Friede', 'Gertrud', 'Gertrude', 'Gisela', 'Grete',
+            'Gretel', 'Hanna', 'Hannah', 'Hedwig', 'Helene', 'Henriette', 'Hermine', 'Hilde', 'Hildegard', 'Ida',
+            'Ilse', 'Inge', 'Ingeborg', 'Irma', 'Irmgard', 'Johanna', 'Josephine', 'Julia', 'Juliane', 'Karoline',
+            'Katharina', 'Klara', 'Kollwitz', 'Käte', 'Käthe', 'Lange', 'Lena', 'Leonore', 'Leopoldine', 'Lina',
+            'Lisa', 'Lisbeth', 'Lotte', 'Louise', 'Luise', 'Luxemburg', 'Magdalena', 'Margarete', 'Margarethe',
+            'Maria', 'Marie', 'Marlene', 'Marta', 'Martha', 'Mathilde', 'Minna', 'Monika', 'Nelly', 'Ottilie',
+            'Paula', 'Pauline', 'Rahel', 'Regine', 'Renate', 'Rita', 'Rosa', 'Rosalie', 'Sibylle', 'Sidonie',
+            'Sofie', 'Sophie', 'Susanne', 'Thea', 'Thekla', 'Theresia', 'Trude', 'Trudi', 'Ulrike', 'Ursula',
+            'Veronika', 'Viktoria', 'Viola', 'Walburga', 'Wally', 'Walpurga', 'Wanda', 'Wilhelmine', 'Yvonne',
+            'Zetkin'
+        ]);
+        var maleStreetNameParts = new Set([
+            'Adalbert', 'Albert', 'Albrecht', 'Alexander', 'Alfred', 'Alois', 'Andreas', 'Anton', 'August', 'Axel',
+            'Benno', 'Bernhard', 'Bruno', 'Carl', 'Caspar', 'Christian', 'Christoph', 'Conrad', 'Daniel', 'David',
+            'Dietrich', 'Eduard', 'Emanuel', 'Emil', 'Erich', 'Ernst', 'Eugen', 'Felix', 'Ferdinand', 'Franz',
+            'Friedrich', 'Fritz', 'Georg', 'Gerhard', 'Gottfried', 'Gustav', 'Hans', 'Heinrich', 'Helmuth',
+            'Hermann', 'Jakob', 'Joachim', 'Johann', 'Johannes', 'Josef', 'Julius', 'Karl', 'Konrad', 'Kurt', 'Leo',
+            'Leopold', 'Ludwig', 'Magnus', 'Martin', 'Matthias', 'Max', 'Michael', 'Moritz', 'Nikolaus', 'Norbert',
+            'Otto', 'Paul', 'Peter', 'Philipp', 'Richard', 'Robert', 'Rudolf', 'Samuel', 'Sebastian', 'Sigmund',
+            'Stefan', 'Theodor', 'Thomas', 'Ulrich', 'Victor', 'Viktor', 'Walter', 'Werner', 'Wilhelm', 'Willy',
+            'Wolfgang', 'Adenauer', 'Bebel', 'Behring', 'Bismarck', 'Böckler', 'Brandt', 'Brecht', 'Curie',
+            'Diesel', 'Dohm', 'Dürer', 'Ebert', 'Einstein', 'Eisler', 'Engels', 'Fontane', 'Forster', 'Freud',
+            'Gaulle', 'Gauss', 'Goethe', 'Gropius', 'Gutenberg', 'Haeckel', 'Händel', 'Heine', 'Helmholtz',
+            'Humboldt', 'Jahn', 'Kant', 'Kepler', 'Kleist', 'Klopstock', 'Körner', 'Lassalle', 'Leibniz',
+            'Liebknecht', 'Lortzing', 'Mann', 'Marx', 'Mendelsohn', 'Menzel', 'Mierendorff', 'Mozart', 'Mühsam',
+            'Müller', 'Nansen', 'Newton', 'Nobel', 'Pestalozzi', 'Planck', 'Raabe', 'Rembrandt', 'Rilke', 'Röntgen',
+            'Scharnhorst', 'Schiller', 'Schinkel', 'Schliemann', 'Schlüter', 'Schumann', 'Siemens', 'Stein',
+            'Stresemann', 'Tucholsky', 'Virchow', 'Wagner', 'Weber', 'Wichert', 'Winckelmann', 'Winkelmann', 'Zola'
+        ]);
+
+        function roundNumber(value, digits) {
+            return Number(value.toFixed(digits));
+        }
+
+        function endpointKey(coord) {
+            return roundNumber(coord[0], 6) + ',' + roundNumber(coord[1], 6);
+        }
+
+        function getSavedCameraOverrides() {
+            try {
+                return JSON.parse(window.localStorage.getItem(CAMERA_OVERRIDE_STORAGE_KEY) || '{}');
+            } catch (err) {
+                return {};
+            }
+        }
+
+        function applySavedCameraOverrides() {
+            var overrides = getSavedCameraOverrides();
+            config.chapters.forEach(function (chapter) {
+                var override = overrides[chapter.id];
+                if (!override) return;
+                chapter.location = override.location;
+                chapter.fitToStreetBounds = false;
+            });
+        }
+
+        applySavedCameraOverrides();
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function smoothstep(edge0, edge1, value) {
+            var t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+            return t * t * (3 - 2 * t);
+        }
+
+        function hexToRgb(hex) {
+            var normalized = hex.replace('#', '');
+            return {
+                r: parseInt(normalized.slice(0, 2), 16),
+                g: parseInt(normalized.slice(2, 4), 16),
+                b: parseInt(normalized.slice(4, 6), 16)
+            };
+        }
+
+        function mixColors(startHex, endHex, amount) {
+            var start = hexToRgb(startHex);
+            var end = hexToRgb(endHex);
+            var t = clamp(amount, 0, 1);
+            return 'rgb(' + Math.round(start.r + (end.r - start.r) * t) + ', ' +
+                Math.round(start.g + (end.g - start.g) * t) + ', ' +
+                Math.round(start.b + (end.b - start.b) * t) + ')';
+        }
+
+        function isStreetHighlightLayer(layerId) {
+            return Boolean(streetHighlightColors[layerId]);
+        }
+
+        function getStreetHighlightLayers(chapterItems) {
+            return chapterItems
+                .map(function (item) { return item.layer; })
+                .filter(isStreetHighlightLayer);
+        }
+
+        function getStreetHighlightItems(chapterItems) {
+            return chapterItems.filter(function (item) {
+                return isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function getNonStreetHighlightItems(chapterItems) {
+            return chapterItems.filter(function (item) {
+                return !isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function setStreetHighlightProgress(layerId, progress) {
+            if (!map.getLayer(layerId)) return;
+
+            var t = clamp(progress, 0, 1);
+            var glowLayerId = streetGlowLayerIds[layerId];
+            var targetColor = streetHighlightColors[layerId];
+            var glowOpacity = 0.22 * smoothstep(0.02, 0.22, t);
+            var coreOpacity = 0.82 * smoothstep(0.08, 0.38, t);
+            var colorMix = smoothstep(0.2, 0.88, t);
+            var widthMix = smoothstep(0.32, 1, t);
+            var glowWidthMix = smoothstep(0.06, 0.44, t);
+
+            if (glowLayerId && map.getLayer(glowLayerId)) {
+                map.setPaintProperty(glowLayerId, 'line-color', targetColor);
+                map.setPaintProperty(glowLayerId, 'line-opacity', glowOpacity);
+                map.setPaintProperty(glowLayerId, 'line-width', 7 + 3 * glowWidthMix);
+            }
+
+            map.setPaintProperty(layerId, 'line-color', mixColors('#ffffff', targetColor, colorMix));
+            map.setPaintProperty(layerId, 'line-opacity', coreOpacity);
+            map.setPaintProperty(layerId, 'line-width', 3.4 + 1.6 * widthMix);
+        }
+
+        function setStreetHighlightFadeFactor(layerId, factor) {
+            if (!map.getLayer(layerId)) return;
+
+            var t = clamp(factor, 0, 1);
+            var glowLayerId = streetGlowLayerIds[layerId];
+
+            map.setPaintProperty(layerId, 'line-opacity-transition', { duration: 180 });
+            map.setPaintProperty(layerId, 'line-opacity', 1 * t);
+
+            if (glowLayerId && map.getLayer(glowLayerId)) {
+                map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: 180 });
+                map.setPaintProperty(glowLayerId, 'line-opacity', 0.04 * t);
+            }
+        }
+
+        function updateStreetHighlightFadeForChapter(chapter, progress) {
+            if (activeStreetHighlightChapterId !== chapter.id) return;
+
+            if (Date.now() - activeStreetHighlightStartedAt < 1400) {
+                return;
+            }
+
+            var fadeFactor = 1 - smoothstep(0.84, 0.985, progress);
+            getStreetHighlightLayers(chapter.onChapterEnter || []).forEach(function (layerId) {
+                setStreetHighlightFadeFactor(layerId, fadeFactor);
+            });
+        }
+
+        function applyChapterLayerState(chapterItems, entering) {
+            chapterItems.forEach(function (item) {
+                setLayerOpacity(item);
+            });
+        }
+
+        function primeStreetHighlightItems(chapterItems) {
+            chapterItems.forEach(function (item) {
+                var layerId = item.layer;
+                var glowLayerId = streetGlowLayerIds[layerId];
+                if (!map.getLayer(layerId)) return;
+
+                map.setPaintProperty(layerId, 'line-color-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-opacity-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-width-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-color', '#ffffff');
+                map.setPaintProperty(layerId, 'line-opacity', 0);
+                map.setPaintProperty(layerId, 'line-width', 3.4);
+
+                if (glowLayerId && map.getLayer(glowLayerId)) {
+                    map.setPaintProperty(glowLayerId, 'line-color-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-width-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-color', item.color || streetHighlightColors[layerId]);
+                    map.setPaintProperty(glowLayerId, 'line-opacity', 0);
+                    map.setPaintProperty(glowLayerId, 'line-width', 7);
+                }
+            });
+        }
+
+        function clearPendingStreetHighlight() {
+            if (pendingStreetHighlightTimer) {
+                window.clearTimeout(pendingStreetHighlightTimer);
+                pendingStreetHighlightTimer = null;
+            }
+            if (pendingStreetApplyFrame) {
+                window.cancelAnimationFrame(pendingStreetApplyFrame);
+                pendingStreetApplyFrame = null;
+            }
+        }
+
+        function areStreetHighlightLayersReady(chapter) {
+            return getStreetHighlightLayers(chapter.onChapterEnter || []).every(function (layerId) {
+                return !!map.getLayer(layerId);
+            });
+        }
+
+        function activatePendingStreetHighlight(chapterId) {
+            if (pendingStreetHighlightChapterId !== chapterId) return;
+
+            var chapter = config.chapters.find(function (chap) {
+                return chap.id === chapterId;
+            });
+            if (!chapter) return;
+
+            if (!areStreetHighlightLayersReady(chapter)) {
+                clearPendingStreetHighlight();
+                pendingStreetHighlightTimer = window.setTimeout(function () {
+                    activatePendingStreetHighlight(chapterId);
+                }, 250);
+                return;
+            }
+
+            if (map.isMoving && map.isMoving()) {
+                map.once('moveend', function () {
+                    activatePendingStreetHighlight(chapterId);
+                });
+                return;
+            }
+
+            var streetItems = getStreetHighlightItems(chapter.onChapterEnter || []);
+            primeStreetHighlightItems(streetItems);
+            pendingStreetApplyFrame = window.requestAnimationFrame(function () {
+                pendingStreetApplyFrame = window.requestAnimationFrame(function () {
+                    pendingStreetApplyFrame = null;
+                    applyChapterLayerState(streetItems, true);
+                });
+            });
+            activeStreetHighlightChapterId = chapterId;
+            activeStreetHighlightStartedAt = Date.now();
+            pendingStreetHighlightChapterId = null;
+            pendingStreetHighlightTimer = null;
+        }
+
+        function scheduleStreetHighlightStart(chapter) {
+            var streetItems = getStreetHighlightItems(chapter.onChapterEnter || []);
+            if (!streetItems.length) return;
+
+            pendingStreetHighlightChapterId = chapter.id;
+            clearPendingStreetHighlight();
+            pendingStreetHighlightTimer = window.setTimeout(function () {
+                activatePendingStreetHighlight(chapter.id);
+            }, 220);
+        }
+
+        function extendBoundsWithCoordinates(bounds, coordinates) {
+            if (!Array.isArray(coordinates)) return bounds;
+
+            if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+                if (!bounds) {
+                    return [coordinates[0], coordinates[1], coordinates[0], coordinates[1]];
+                }
+                bounds[0] = Math.min(bounds[0], coordinates[0]);
+                bounds[1] = Math.min(bounds[1], coordinates[1]);
+                bounds[2] = Math.max(bounds[2], coordinates[0]);
+                bounds[3] = Math.max(bounds[3], coordinates[1]);
+                return bounds;
+            }
+
+            coordinates.forEach(function (child) {
+                bounds = extendBoundsWithCoordinates(bounds, child);
+            });
+            return bounds;
+        }
+
+        function getLineCoordinates(feature) {
+            var geometry = feature.geometry || {};
+            if (geometry.type === 'LineString') return geometry.coordinates || [];
+            if (geometry.type === 'MultiLineString') return (geometry.coordinates && geometry.coordinates[0]) || [];
+            return [];
+        }
+
+        function getLineLengthMeters(coords) {
+            var total = 0;
+            for (var i = 1; i < coords.length; i += 1) {
+                var a = coords[i - 1];
+                var b = coords[i];
+                var dx = (b[0] - a[0]) * 111320 * Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180);
+                var dy = (b[1] - a[1]) * 110540;
+                total += Math.sqrt(dx * dx + dy * dy);
+            }
+            return total;
+        }
+
+        function trimLineEnd(coords, trimMeters) {
+            if (!coords || coords.length < 2 || trimMeters <= 0) return coords;
+
+            var remaining = trimMeters;
+            var trimmed = coords.slice();
+
+            while (trimmed.length > 1 && remaining > 0) {
+                var last = trimmed[trimmed.length - 1];
+                var prev = trimmed[trimmed.length - 2];
+                var segmentLength = getLineLengthMeters([prev, last]);
+
+                if (segmentLength <= remaining) {
+                    trimmed.pop();
+                    remaining -= segmentLength;
+                    continue;
+                }
+
+                var ratio = (segmentLength - remaining) / segmentLength;
+                trimmed[trimmed.length - 1] = [
+                    prev[0] + (last[0] - prev[0]) * ratio,
+                    prev[1] + (last[1] - prev[1]) * ratio
+                ];
+                remaining = 0;
+            }
+
+            return trimmed;
+        }
+
+        function getGenderStreetNameParts(streetName) {
+            if (!streetName || excludedGenderStreetNamePattern.test(streetName)) return [];
+
+            var cleaned = streetName
+                .replace(
+                    /(straße|strasse|-Str\.|allee|weg|platz|damm|chaussee|ring|gasse|steig|pfad|zeile|promenade|ufer|korso|terrasse|brücke|markt|steg|kai|bogen|tunnel|park|hain)$/i,
+                    ''
+                )
+                .trim()
+                .replace(/-$/, '');
+
+            return cleaned.split(/[-\s/()]+/).filter(Boolean);
+        }
+
+        function classifyStreetGender(streetName) {
+            var parts = getGenderStreetNameParts(streetName);
+            if (!parts.length) return null;
+
+            var hasFemale = parts.some(function (part) {
+                return femaleStreetNameParts.has(part);
+            });
+            var hasMale = parts.some(function (part) {
+                return maleStreetNameParts.has(part);
+            });
+
+            if (hasFemale === hasMale) return null;
+            return hasFemale ? 'female' : 'male';
+        }
+
+        function buildGenderStreetGeojson(geojson, gender) {
+            return {
+                type: 'FeatureCollection',
+                features: (geojson.features || []).filter(function (feature) {
+                    var streetName = feature.properties && feature.properties.strname;
+                    return classifyStreetGender(streetName) === gender;
+                })
+            };
+        }
+
+        function pruneStreetBranchFeatures(features, maxLeafLengthMeters) {
+            if (features.length <= 1) return features.slice();
+
+            var kept = features.slice();
+            var changed = true;
+
+            while (changed && kept.length > 1) {
+                changed = false;
+                var degrees = {};
+
+                kept.forEach(function (feature) {
+                    var coords = getLineCoordinates(feature);
+                    if (coords.length < 2) return;
+                    var startKey = endpointKey(coords[0]);
+                    var endKey = endpointKey(coords[coords.length - 1]);
+                    degrees[startKey] = (degrees[startKey] || 0) + 1;
+                    degrees[endKey] = (degrees[endKey] || 0) + 1;
+                });
+
+                var next = [];
+                kept.forEach(function (feature) {
+                    var coords = getLineCoordinates(feature);
+                    if (coords.length < 2) {
+                        next.push(feature);
+                        return;
+                    }
+
+                    var startKey = endpointKey(coords[0]);
+                    var endKey = endpointKey(coords[coords.length - 1]);
+                    var isLeaf = (degrees[startKey] === 1 || degrees[endKey] === 1);
+                    var isShort = (feature.properties && feature.properties.__segment_length_m || 0) < maxLeafLengthMeters;
+
+                    if (isLeaf && isShort && kept.length > 1) {
+                        changed = true;
+                        return;
+                    }
+
+                    next.push(feature);
+                });
+
+                if (next.length === 0) break;
+                kept = next;
+            }
+
+            return kept;
+        }
+
+        function shouldPruneStreetBranches(streetName) {
+            return pruneStreetBranchNameSet.has(streetName);
+        }
+
+        function getPruneStreetBranchMaxLength(streetName) {
+            return pruneStreetBranchMaxLengthByName[streetName] || 90;
+        }
+
+        function buildHighlightStreetGeojson(geojson) {
+            var cloned = {};
+            var grouped = {};
+
+            (geojson.features || []).forEach(function (feature) {
+                var streetName = feature.properties && feature.properties.strname;
+                if (!highlightedStreetNameSet.has(streetName)) return;
+
+                var copy = JSON.parse(JSON.stringify(feature));
+                copy.properties = copy.properties || {};
+                if (streetName === 'Eiergasse') {
+                    copy.geometry.coordinates = trimLineEnd(copy.geometry.coordinates, 11);
+                }
+                copy.properties.__segment_length_m = roundNumber(getLineLengthMeters(getLineCoordinates(copy)), 1);
+                if (!grouped[streetName]) grouped[streetName] = [];
+                grouped[streetName].push(copy);
+            });
+
+            cloned.type = 'FeatureCollection';
+            cloned.features = [];
+
+            Object.keys(grouped).forEach(function (streetName) {
+                cloned.features = cloned.features.concat(
+                    shouldPruneStreetBranches(streetName)
+                        ? pruneStreetBranchFeatures(grouped[streetName], getPruneStreetBranchMaxLength(streetName))
+                        : grouped[streetName]
+                );
+            });
+
+            return cloned;
+        }
+
+        function chapterNeedsStreetData(chapter) {
+            return (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'all-streets-context-thin' ||
+                    item.layer === femaleStreetLayerId ||
+                    item.layer === maleStreetLayerId ||
+                    isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function chapterNeedsSatellite(chapter) {
+            return (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'satellite-imagery';
+            });
+        }
+
+        function getSatelliteInsertBeforeId() {
+            if (map.getLayer('all-streets-context-thin')) return 'all-streets-context-thin';
+
+            for (var i = 0; i < highlightStreetLayerConfigs.length; i += 1) {
+                if (map.getLayer(highlightStreetLayerConfigs[i].id)) {
+                    return highlightStreetLayerConfigs[i].id;
+                }
+            }
+
+            return undefined;
+        }
+
+        function ensureSatelliteReady() {
+            if (satelliteDataReady) return Promise.resolve();
+            if (satelliteDataPromise) return satelliteDataPromise;
+
+            satelliteDataPromise = Promise.resolve().then(function () {
+                if (!map.getSource('satellite')) {
+                    map.addSource('satellite', {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                    });
+                }
+
+                if (!map.getLayer('satellite-imagery')) {
+                    map.addLayer({
+                        id: 'satellite-imagery',
+                        type: 'raster',
+                        source: 'satellite',
+                        paint: { 'raster-opacity': 0 }
+                    }, getSatelliteInsertBeforeId());
+                }
+
+                satelliteDataReady = true;
+                var activeChapter = config.chapters[currentChapterIndex];
+                if (activeChapter) {
+                    applyChapterLayerState(getNonStreetHighlightItems(activeChapter.onChapterEnter || []), true);
+                }
+            }).catch(function () {
+                satelliteDataPromise = null;
+            });
+
+            return satelliteDataPromise;
+        }
+
+        function ensureStreetDataReady() {
+            if (streetDataReady) return Promise.resolve();
+            if (streetDataPromise) return streetDataPromise;
+
+            streetDataPromise = fetch('./data/strassen_berlin_wgs84.geojson')
+                .then(function (response) { return response.json(); })
+                .then(function (geojson) {
+                    if (!geojson.features) return;
+
+                    if (map.getSource('strassen')) {
+                        map.getSource('strassen').setData(geojson);
+                    } else {
+                        map.addSource('strassen', {
+                            type: 'geojson',
+                            data: geojson
+                        });
+
+                        map.addLayer({
+                            id: 'all-streets-context-thin',
+                            type: 'line',
+                            source: 'strassen',
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#f2efe8',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    14, 0.45,
+                                    16, 0.7,
+                                    18, 1.05
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    var femaleStreetGeojson = buildGenderStreetGeojson(geojson, 'female');
+                    var maleStreetGeojson = buildGenderStreetGeojson(geojson, 'male');
+
+                    if (map.getSource(maleStreetSourceId)) {
+                        map.getSource(maleStreetSourceId).setData(maleStreetGeojson);
+                    } else {
+                        map.addSource(maleStreetSourceId, {
+                            type: 'geojson',
+                            data: maleStreetGeojson
+                        });
+
+                        map.addLayer({
+                            id: maleStreetLayerId,
+                            type: 'line',
+                            source: maleStreetSourceId,
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#f2efe8',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 0.32,
+                                    12, 0.48,
+                                    15, 0.8
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    if (map.getSource(femaleStreetSourceId)) {
+                        map.getSource(femaleStreetSourceId).setData(femaleStreetGeojson);
+                    } else {
+                        map.addSource(femaleStreetSourceId, {
+                            type: 'geojson',
+                            data: femaleStreetGeojson
+                        });
+
+                        map.addLayer({
+                            id: femaleStreetLayerId,
+                            type: 'line',
+                            source: femaleStreetSourceId,
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#ff5a5f',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 0.42,
+                                    12, 0.62,
+                                    15, 1.05
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    geojson.features.forEach(function (feature) {
+                        var streetName = feature.properties && feature.properties.strname;
+                        if (!streetName) return;
+
+                        Object.keys(streetNamesByLayer).forEach(function (layerId) {
+                            if (streetNamesByLayer[layerId].indexOf(streetName) === -1) return;
+                            streetBoundsByLayer[layerId] = extendBoundsWithCoordinates(
+                                streetBoundsByLayer[layerId] || null,
+                                feature.geometry && feature.geometry.coordinates
+                            );
+                        });
+                    });
+
+                    var highlightGeojson = buildHighlightStreetGeojson(geojson);
+                    if (map.getSource('highlight-strassen')) {
+                        map.getSource('highlight-strassen').setData(highlightGeojson);
+                    } else {
+                        map.addSource('highlight-strassen', {
+                            type: 'geojson',
+                            data: highlightGeojson
+                        });
+                        highlightStreetLayerConfigs.forEach(function (l) {
+                            map.addLayer({
+                                id: streetGlowLayerIds[l.id],
+                                type: 'line',
+                                source: 'highlight-strassen',
+                                filter: l.filter,
+                                layout: {
+                                    'line-cap': 'butt',
+                                    'line-join': 'miter'
+                                },
+                                paint: {
+                                    'line-color': l.color,
+                                    'line-width': 10,
+                                    'line-blur': 2,
+                                    'line-opacity': 0
+                                }
+                            });
+
+                            map.addLayer({
+                                id: l.id,
+                                type: 'line',
+                                source: 'highlight-strassen',
+                                filter: l.filter,
+                                layout: {
+                                    'line-cap': 'butt',
+                                    'line-join': 'miter'
+                                },
+                                paint: {
+                                    'line-color': '#ffffff',
+                                    'line-width': 4,
+                                    'line-opacity': 0
+                                }
+                            });
+                        });
+                    }
+
+                    highlightLayersReady = true;
+                    streetDataReady = true;
+                    var activeChapter = config.chapters[currentChapterIndex];
+                    if (activeChapter) {
+                        applyChapterLayerState(getNonStreetHighlightItems(activeChapter.onChapterEnter || []), true);
+                        if (getStreetHighlightItems(activeChapter.onChapterEnter || []).length) {
+                            scheduleStreetHighlightStart(activeChapter);
+                        }
+                    }
+                })
+                .catch(function () {
+                    // Fall back to configured chapter locations if bounds loading fails.
+                    streetDataPromise = null;
+                });
+
+            return streetDataPromise;
+        }
+
+        function preloadStreetDataInBackground() {
+            if (streetDataReady || streetDataPromise) return;
+
+            var startPreload = function () {
+                ensureStreetDataReady();
+            };
+
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(startPreload, { timeout: 1500 });
+            } else {
+                window.setTimeout(startPreload, 450);
+            }
+        }
+
+        function lngLatToWorldPixel(lng, lat, z) {
+            var scale = 256 * Math.pow(2, z);
+            var sinLat = Math.sin(lat * Math.PI / 180);
+            var x = (lng + 180) / 360 * scale;
+            var y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+            return { x: x, y: y };
+        }
+
+        function normalizeTileX(x, z) {
+            var worldSize = Math.pow(2, z);
+            return ((x % worldSize) + worldSize) % worldSize;
+        }
+
+        function buildRasterTileUrl(template, z, x, y) {
+            return template
+                .replace('{z}', String(z))
+                .replace('{x}', String(x))
+                .replace('{y}', String(y));
+        }
+
+        function getChapterPrefetchZoomLevels(chapter) {
+            var base = chapter.location.zoom + 1;
+            var levels = [Math.floor(base), Math.ceil(base)];
+            return levels.filter(function (value, index, list) {
+                return value >= 0 && value <= 22 && list.indexOf(value) === index;
+            });
+        }
+
+        function getChapterPrefetchTileUrls(chapter, template) {
+            if (!map || !map.getCanvas()) return [];
+
+            var canvas = map.getCanvas();
+            var dpr = window.devicePixelRatio || 1;
+            var width = (canvas.clientWidth || window.innerWidth) * dpr;
+            var height = (canvas.clientHeight || window.innerHeight) * dpr;
+            var padding = getChapterPadding(chapter);
+            var left = (padding.left || 0) * dpr;
+            var right = (padding.right || 0) * dpr;
+            var top = (padding.top || 0) * dpr;
+            var bottom = (padding.bottom || 0) * dpr;
+            var screenCenterX = width / 2 + (left - right) / 2;
+            var screenCenterY = height / 2 + (top - bottom) / 2;
+            var margin = 384;
+            var urls = [];
+
+            getChapterPrefetchZoomLevels(chapter).forEach(function (z) {
+                var center = lngLatToWorldPixel(chapter.location.center[0], chapter.location.center[1], z);
+                var minPixelX = center.x - screenCenterX - margin;
+                var maxPixelX = center.x + (width - screenCenterX) + margin;
+                var minPixelY = center.y - screenCenterY - margin;
+                var maxPixelY = center.y + (height - screenCenterY) + margin;
+                var tileMinX = Math.floor(minPixelX / 256);
+                var tileMaxX = Math.floor(maxPixelX / 256);
+                var tileMinY = Math.max(0, Math.floor(minPixelY / 256));
+                var tileMaxY = Math.min(Math.pow(2, z) - 1, Math.floor(maxPixelY / 256));
+
+                for (var tileX = tileMinX; tileX <= tileMaxX; tileX += 1) {
+                    for (var tileY = tileMinY; tileY <= tileMaxY; tileY += 1) {
+                        urls.push(buildRasterTileUrl(template, z, normalizeTileX(tileX, z), tileY));
+                    }
+                }
+            });
+
+            return urls;
+        }
+
+        function prefetchRasterTilesForChapter(chapter, template) {
+            getChapterPrefetchTileUrls(chapter, template).forEach(function (url) {
+                if (prefetchedTileUrlSet.has(url)) return;
+                prefetchedTileUrlSet.add(url);
+                window.fetch(url, { mode: 'no-cors', cache: 'force-cache', credentials: 'omit' }).catch(function () {
+                    prefetchedTileUrlSet.delete(url);
+                });
+            });
+        }
+
+        function prefetchChapterResources(chapter) {
+            if (!chapter) return;
+
+            if (chapterNeedsStreetData(chapter)) {
+                ensureStreetDataReady();
+            }
+
+            prefetchRasterTilesForChapter(chapter, 'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png');
+
+            if (chapterNeedsSatellite(chapter)) {
+                prefetchRasterTilesForChapter(
+                    chapter,
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                );
+            }
+        }
+
+        function shouldUseStreetBounds(chapter) {
+            if (chapter.fitToStreetBounds === false) return false;
+
+            var streetLayers = getStreetHighlightLayers(chapter.onChapterEnter || []);
+            var hasSatellite = (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'satellite-imagery';
+            });
+            return streetLayers.length === 1 && !hasSatellite;
+        }
+
+        function getChapterStreetBounds(chapter) {
+            if (!shouldUseStreetBounds(chapter)) return null;
+
+            var layerId = getStreetHighlightLayers(chapter.onChapterEnter)[0];
+            var bounds = streetBoundsByLayer[layerId];
+            if (!bounds) return null;
+
+            return [
+                [bounds[0], bounds[1]],
+                [bounds[2], bounds[3]]
+            ];
+        }
+
+        function getLayerPaintType(layer) {
+            var mapLayer = map.getLayer(layer);
+            if (!mapLayer) return null;
+            return layerTypes[mapLayer.type];
+        }
+
+        function setLayerOpacity(layer) {
+            var mapLayer = map.getLayer(layer.layer);
+            if (!mapLayer) return;
+            var layerType = mapLayer.type;
+
+            if (layerType === 'line' && streetHighlightColors[layer.layer]) {
+                var highlightColor = layer.color || (layer.opacity > 0 ? streetHighlightColors[layer.layer] : '#ffffff');
+                var highlightOpacity = layer.highlightOpacity != null
+                    ? layer.highlightOpacity
+                    : (layer.opacity > 0 ? 1 : layer.opacity);
+                var highlightWidth = layer.highlightWidth != null
+                    ? layer.highlightWidth
+                    : (layer.opacity > 0 ? 5 : 3.4);
+                var opacityDuration = layer.opacity > 0 ? Math.min(layer.duration || 5000, 5000) : 500;
+                var colorDuration = layer.opacity > 0 ? 3200 : 400;
+                var widthDuration = layer.opacity > 0 ? 1400 : 320;
+                var glowLayerId = streetGlowLayerIds[layer.layer];
+
+                if (layer.duration) {
+                    map.setPaintProperty(layer.layer, 'line-color-transition', { duration: colorDuration });
+                    map.setPaintProperty(layer.layer, 'line-opacity-transition', { duration: opacityDuration });
+                    map.setPaintProperty(layer.layer, 'line-width-transition', { duration: widthDuration });
+                    if (glowLayerId) {
+                        map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: layer.opacity > 0 ? 1100 : 260 });
+                    }
+                }
+
+                if (glowLayerId) {
+                    map.setPaintProperty(glowLayerId, 'line-color', highlightColor);
+                    map.setPaintProperty(glowLayerId, 'line-opacity', layer.opacity > 0 ? 0.04 : 0);
+                }
+                map.setPaintProperty(layer.layer, 'line-color', highlightColor);
+                map.setPaintProperty(layer.layer, 'line-opacity', highlightOpacity);
+                map.setPaintProperty(layer.layer, 'line-width', highlightWidth);
+                return;
+            }
+
+            var paintProps = layerTypes[layerType];
+            paintProps.forEach(function (prop) {
+                if (layer.duration) {
+                    map.setPaintProperty(layer.layer, prop + '-transition', { duration: layer.duration });
+                }
+                map.setPaintProperty(layer.layer, prop, layer.opacity);
+            });
+        }
+
+        function setPaintIfLayerExists(layerId, prop, value) {
+            if (map.getLayer(layerId)) {
+                try {
+                    map.setPaintProperty(layerId, prop, value);
+                } catch (err) {
+                    // Ignore unsupported paint properties on third-party basemap layers.
+                }
+            }
+        }
+
+        function setBasemapRoadPalette(caseColor, fillColor, transitionDuration) {
+            basemapRoadCaseLayerIds.forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-color-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-color', caseColor);
+            });
+
+            basemapRoadFillLayerIds.forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-color-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-color', fillColor);
+            });
+        }
+
+        function setBasemapRoadOpacity(opacity, transitionDuration) {
+            basemapRoadCaseLayerIds.concat(basemapRoadFillLayerIds).forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-opacity-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-opacity', opacity);
+            });
+        }
+
+        function tuneBasemap() {
+            ['landcover', 'park_national_park', 'park_nature_reserve', 'landuse'].forEach(function (id) {
+                setPaintIfLayerExists(id, 'fill-color', '#181818');
+            });
+            setPaintIfLayerExists('background', 'background-color', '#181818');
+            setPaintIfLayerExists('landuse_residential', 'fill-color', 'rgba(40, 40, 40, 0.28)');
+            setPaintIfLayerExists('water', 'fill-color', '#3a4650');
+            setPaintIfLayerExists('waterway', 'line-color', '#516675');
+            setBasemapRoadPalette('#2c2c2c', '#4a4a4a', 0);
+        }
+
+        function setIntroRoadPalette(active) {
+            if (active) {
+                setBasemapRoadOpacity(0, 700);
+            } else {
+                setBasemapRoadOpacity(1, 500);
+                setBasemapRoadPalette('#2c2c2c', '#4a4a4a', 500);
+            }
+        }
+
+        function isIntroVisualChapter(chapter) {
+            return chapter && (chapter.id === 'intro' || chapter.id === 'dna-der-stadt' || chapter.id === 'ende');
+        }
+
+        function activateIntroEffects() {
+            document.body.classList.add('intro-active');
+            setIntroRoadPalette(true);
+        }
+
+        function deactivateIntroEffects() {
+            document.body.classList.remove('intro-active');
+            setIntroRoadPalette(false);
+        }
+
+        function syncIntroEffects() {
+            var chapter = config.chapters[currentChapterIndex];
+            if (isIntroVisualChapter(chapter)) {
+                activateIntroEffects();
+            } else {
+                deactivateIntroEffects();
+            }
+        }
+
+        function setTopbarVisibility(visible) {
+            var topbar = document.getElementById('topbar-title');
+            if (!topbar) return;
+            topbar.classList.toggle('is-hidden', !visible);
+        }
+
+        function updateTopbarVisibility() {
+            setTopbarVisibility(window.scrollY < 40);
+        }
+
+        var lastTopbarScrollY = -1;
+
+        function watchTopbarVisibility() {
+            if (window.scrollY !== lastTopbarScrollY) {
+                lastTopbarScrollY = window.scrollY;
+                updateTopbarVisibility();
+            }
+            window.requestAnimationFrame(watchTopbarVisibility);
+        }
+
+        updateTopbarVisibility();
+        watchTopbarVisibility();
+        window.addEventListener('scroll', function () {
+            if (pendingStreetHighlightChapterId) {
+                var chapter = config.chapters.find(function (chap) {
+                    return chap.id === pendingStreetHighlightChapterId;
+                });
+                if (chapter) scheduleStreetHighlightStart(chapter);
+            }
+        }, { passive: true });
+
+        function getChapterPadding(chapter) {
+            var isMobile = window.innerWidth <= 900;
+            if (isMobile) {
+                return { top: 110, right: 16, bottom: 32, left: 16 };
+            }
+
+            if (isIntroVisualChapter(chapter)) {
+                return { top: 0, right: 0, bottom: 0, left: 0 };
+            }
+
+            var panelWidth = Math.min(490, window.innerWidth - 56);
+            var sidePadding = Math.round(panelWidth + Math.min(window.innerWidth * 0.08, 96));
+            var basePadding = { top: 110, right: 8, bottom: 40, left: 8 };
+
+            if (chapter.alignment === 'right') {
+                basePadding.right = sidePadding;
+            } else {
+                basePadding.left = sidePadding;
+            }
+
+            return basePadding;
+        }
+
+        function getChapterCameraOptions(chapter) {
+            if (isIntroVisualChapter(chapter)) {
+                return Object.assign({}, chapter.location);
+            }
+
+            return Object.assign({}, chapter.location, {
+                padding: getChapterPadding(chapter)
+            });
+        }
+
+        function moveToChapter(chapter, immediate) {
+            var bounds = getChapterStreetBounds(chapter);
+
+            if (bounds) {
+                map.fitBounds(bounds, {
+                    padding: getChapterPadding(chapter),
+                    bearing: chapter.location.bearing,
+                    pitch: chapter.location.pitch,
+                    duration: immediate ? 0 : 1200,
+                    maxZoom: chapter.location.zoom
+                });
+                return;
+            }
+
+            var camera = getChapterCameraOptions(chapter);
+            if (immediate) {
+                map.jumpTo(camera);
+            } else {
+                map[chapter.mapAnimation || 'flyTo'](camera);
+            }
+        }
+
+        function updateMapAnchorUi(message) {
+            var chapterLabel = document.getElementById('map-anchor-chapter');
+            var output = document.getElementById('map-anchor-output');
+            var toggleButton = document.getElementById('toggle-map-edit');
+            var tools = document.getElementById('map-anchor-tools');
+
+            if (chapterLabel) {
+                chapterLabel.textContent = config.chapters[currentChapterIndex].id;
+            }
+            if (toggleButton) {
+                toggleButton.textContent = isMapEditMode ? 'Lock map' : 'Edit map';
+                toggleButton.classList.toggle('is-active', isMapEditMode);
+            }
+            if (tools) {
+                tools.classList.toggle('is-editing', isMapEditMode);
+            }
+            if (output && message) {
+                output.textContent = message;
+            }
+        }
+
+        function setMapEditingMode(enabled) {
+            isMapEditMode = enabled;
+            document.body.classList.toggle('map-editing', enabled);
+            if (map.dragPan) enabled ? map.dragPan.enable() : map.dragPan.disable();
+            if (map.scrollZoom) enabled ? map.scrollZoom.enable() : map.scrollZoom.disable();
+            if (map.boxZoom) enabled ? map.boxZoom.enable() : map.boxZoom.disable();
+            if (map.dragRotate) enabled ? map.dragRotate.enable() : map.dragRotate.disable();
+            if (map.doubleClickZoom) enabled ? map.doubleClickZoom.enable() : map.doubleClickZoom.disable();
+            if (map.keyboard) enabled ? map.keyboard.enable() : map.keyboard.disable();
+            if (map.touchZoomRotate) enabled ? map.touchZoomRotate.enable() : map.touchZoomRotate.disable();
+            if (map.getCanvas()) {
+                map.getCanvas().style.cursor = enabled ? 'grab' : '';
+            }
+            updateMapAnchorUi(enabled
+                ? 'Drag to pan. Wheel to zoom. Right-drag or Ctrl-drag to rotate/pitch. Click Anchor to save the current slide view.'
+                : 'Edit mode off.');
+        }
+
+        function formatChapterLocation(chapter) {
+            return [
+                chapter.id + ': {',
+                '  fitToStreetBounds: false,',
+                '  location: {',
+                '    center: [' + chapter.location.center[0] + ', ' + chapter.location.center[1] + '],',
+                '    zoom: ' + chapter.location.zoom + ',',
+                '    pitch: ' + chapter.location.pitch + ',',
+                '    bearing: ' + chapter.location.bearing,
+                '  }',
+                '}'
+            ].join('\n');
+        }
+
+        function saveCurrentMapAnchor() {
+            var chapter = config.chapters[currentChapterIndex];
+            var center = map.getCenter();
+            chapter.location = {
+                center: [roundNumber(center.lng, 6), roundNumber(center.lat, 6)],
+                zoom: roundNumber(map.getZoom(), 2),
+                pitch: roundNumber(map.getPitch(), 1),
+                bearing: roundNumber(map.getBearing(), 1)
+            };
+            chapter.fitToStreetBounds = false;
+
+            var overrides = getSavedCameraOverrides();
+            overrides[chapter.id] = { location: chapter.location };
+            try {
+                window.localStorage.setItem(CAMERA_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides));
+            } catch (err) {
+                // Ignore storage failures and still show the values for manual copy.
+            }
+
+            var output = formatChapterLocation(chapter);
+            updateMapAnchorUi(output + '\n\nCopied to clipboard.');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(output).catch(function () {
+                    updateMapAnchorUi(output + '\n\nClipboard blocked. Copy manually from here.');
+                });
+            }
+        }
+
+        // Build story DOM
+        var story = document.getElementById('story');
+        var features = document.createElement('div');
+        features.setAttribute('id', 'features');
+
+        config.chapters.forEach((record, idx) => {
+            var container = document.createElement('div');
+            var chapter = document.createElement('div');
+
+            if (record.title) {
+                var title = document.createElement('h3');
+                title.innerText = record.title;
+                chapter.appendChild(title);
+            }
+
+            if (record.image) {
+                var image = new Image();
+                image.src = record.image;
+                chapter.appendChild(image);
+            }
+
+            if (record.description) {
+                var desc = document.createElement('p');
+                desc.innerHTML = record.description;
+                chapter.appendChild(desc);
+            }
+
+            container.setAttribute('id', record.id);
+            container.classList.add('step');
+            if (idx === 0) container.classList.add('active');
+
+            if (chapter.childNodes.length > 0) {
+                chapter.classList.add(config.theme);
+                chapter.classList.add('card');
+                container.appendChild(chapter);
+            }
+            container.classList.add(alignments[record.alignment] || 'centered');
+            if (record.hidden) container.classList.add('hidden');
+            features.appendChild(container);
+        });
+
+        story.appendChild(features);
+
+        var footer = document.createElement('div');
+
+        if (config.footer) {
+            var footerText = document.createElement('p');
+            footerText.innerHTML = config.footer;
+            footer.appendChild(footerText);
+        }
+
+        if (footer.innerText.length > 0) {
+            footer.classList.add(config.theme);
+            footer.setAttribute('id', 'footer');
+            story.appendChild(footer);
+        }
+
+        var map = new maplibregl.Map({
+            container: 'map',
+            style: config.style,
+            center: config.chapters[0].location.center,
+            zoom: config.chapters[0].location.zoom,
+            bearing: config.chapters[0].location.bearing,
+            pitch: config.chapters[0].location.pitch,
+            attributionControl: false,
+            interactive: false
+        });
+
+        map.addControl(new maplibregl.AttributionControl({ compact: true }));
+
+        if (config.showMarkers) {
+            var marker = new maplibregl.Marker({ color: config.markerColor });
+            marker.setLngLat(config.chapters[0].location.center).addTo(map);
+        }
+
+        var toggleMapEditButton = document.getElementById('toggle-map-edit');
+        var saveMapAnchorButton = document.getElementById('save-map-anchor');
+        if (toggleMapEditButton) {
+            toggleMapEditButton.addEventListener('click', function () {
+                setMapEditingMode(!isMapEditMode);
+            });
+        }
+        if (saveMapAnchorButton) {
+            saveMapAnchorButton.addEventListener('click', function () {
+                saveCurrentMapAnchor();
+            });
+        }
+        updateMapAnchorUi('Edit mode off.');
+
+        var scroller = scrollama();
+
+        map.on('load', function () {
+            setMapEditingMode(false);
+            tuneBasemap();
+
+            // Highlight layers — all start invisible, toggled by chapter enter/exit.
+            // Field names from the Berlin GeoJSON: strname (street name), bezname (Bezirk).
+            var streetLayers = [
+                {
+                    id: 'sonnenallee',
+                    filter: ['==', ['get', 'strname'], 'Sonnenallee'],
+                    streetNames: ['Sonnenallee'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'adlergestell',
+                    filter: ['==', ['get', 'strname'], 'Adlergestell'],
+                    streetNames: ['Adlergestell'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'karl-marx-allee',
+                    filter: ['==', ['get', 'strname'], 'Karl-Marx-Allee'],
+                    streetNames: ['Karl-Marx-Allee'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'moeckernkiez',
+                    filter: ['==', ['get', 'strname'], 'Möckernkiez'],
+                    streetNames: ['Möckernkiez'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'landsberger-allee',
+                    filter: ['==', ['get', 'strname'], 'Landsberger Allee'],
+                    streetNames: ['Landsberger Allee'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'eiergasse',
+                    filter: ['==', ['get', 'strname'], 'Eiergasse'],
+                    streetNames: ['Eiergasse'],
+                    color: '#e74c3c'
+                },
+                {
+                    id: 'geister-strassen',
+                    filter: ['==', ['get', 'strname'], 'Tunnel Tiergarten Spreebogen'],
+                    streetNames: ['Tunnel Tiergarten Spreebogen'],
+                    color: '#e74c3c'
+                },
+                {
+                    // Mohrenstraße was renamed to Anton-Wilhelm-Amo-Straße (OVG ruling 9 July 2025).
+                    // WFS data (© 2024) may still use the old name — both are included.
+                    id: 'anton-wilhelm-amo-strasse',
+                    filter: ['in', ['get', 'strname'], ['literal', ['Anton-Wilhelm-Amo-Straße', 'Mohrenstraße']]],
+                    streetNames: ['Anton-Wilhelm-Amo-Straße', 'Mohrenstraße'],
+                    color: '#e74c3c'
+                },
+                {
+                    // Afrikanisches Viertel streets with colonial names under active debate
+                    id: 'afrikanisches-viertel',
+                    filter: ['in', ['get', 'strname'], ['literal', ['Nachtigalplatz', 'Lüderitzstraße', 'Petersallee']]],
+                    streetNames: ['Nachtigalplatz', 'Lüderitzstraße', 'Petersallee'],
+                    color: '#8e44ad'
+                }
+            ];
+
+            streetLayers.forEach(function (l) {
+                streetHighlightColors[l.id] = l.color;
+                streetGlowLayerIds[l.id] = l.id + '-glow';
+                streetNamesByLayer[l.id] = l.streetNames || [];
+                (l.streetNames || []).forEach(function (streetName) {
+                    highlightedStreetNameSet.add(streetName);
+                });
+            });
+
+            highlightStreetLayerConfigs = streetLayers.slice();
+
+            if (config.chapters[0].onChapterEnter.length > 0) {
+                applyChapterLayerState(config.chapters[0].onChapterEnter, true);
+            }
+            syncIntroEffects();
+            preloadStreetDataInBackground();
+            prefetchChapterResources(config.chapters[1]);
+
+            scroller
+                .setup({
+                    step: '.step',
+                    offset: 0.5,
+                    progress: true
+                })
+                .onStepEnter(response => {
+                    currentChapterIndex = config.chapters.findIndex(chap => chap.id === response.element.id);
+                    var chapter = config.chapters[currentChapterIndex];
+
+                    response.element.classList.add('active');
+                    if (chapterNeedsSatellite(chapter)) {
+                        ensureSatelliteReady();
+                    }
+                    if (currentChapterIndex > 0 && chapterNeedsStreetData(chapter)) {
+                        ensureStreetDataReady();
+                    } else if (currentChapterIndex > 0 && !streetDataReady && !streetDataPromise) {
+                        ensureStreetDataReady();
+                    }
+                    var isInitialIntroEntry = !hasInitializedFirstChapter && currentChapterIndex === 0;
+                    moveToChapter(chapter, isInitialIntroEntry);
+                    hasInitializedFirstChapter = true;
+                    updateMapAnchorUi();
+
+                    if (config.showMarkers) marker.setLngLat(chapter.location.center);
+                    if (chapter.onChapterEnter.length > 0) {
+                        applyChapterLayerState(getNonStreetHighlightItems(chapter.onChapterEnter), true);
+                        scheduleStreetHighlightStart(chapter);
+                    }
+                    syncIntroEffects();
+                    if (chapter.callback) window[chapter.callback]();
+                    if (chapter.rotateAnimation) {
+                        map.once('moveend', () => {
+                            const rotateNumber = map.getBearing();
+                            map.rotateTo(rotateNumber + 180, {
+                                duration: 30000,
+                                easing: t => t
+                            });
+                        });
+                    }
+                    if (config.auto) {
+                        var next_chapter = (currentChapterIndex + 1) % config.chapters.length;
+                        map.once('moveend', () => {
+                            document.querySelectorAll('[data-scrollama-index="' + next_chapter + '"]')[0].scrollIntoView();
+                        });
+                    }
+
+                    prefetchChapterResources(config.chapters[currentChapterIndex + 1]);
+                })
+                .onStepProgress(response => {
+                    var chapter = config.chapters.find(chap => chap.id === response.element.id);
+                    if (!chapter || !chapter.onChapterEnter.length) return;
+                    updateStreetHighlightFadeForChapter(chapter, response.progress);
+                })
+                .onStepExit(response => {
+                    var chapter = config.chapters.find(chap => chap.id === response.element.id);
+                    response.element.classList.remove('active');
+                    if (pendingStreetHighlightChapterId === chapter.id) {
+                        clearPendingStreetHighlight();
+                        pendingStreetHighlightChapterId = null;
+                    }
+                    if (activeStreetHighlightChapterId === chapter.id) {
+                        activeStreetHighlightChapterId = null;
+                    }
+                    if (chapter.onChapterExit.length > 0) applyChapterLayerState(chapter.onChapterExit, false);
+                    syncIntroEffects();
+                });
+
+            if (config.auto) {
+                document.querySelectorAll('[data-scrollama-index="0"]')[0].scrollIntoView();
+            }
+
+            moveToChapter(config.chapters[0], true);
+        });
+    </script>
+
+</body>
+
+</html>

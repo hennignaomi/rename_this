@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local assistant guidance
+CLAUDE.md
+.claude/
+
+# OS / local secrets
+.DS_Store
+config.local.js
+.env

@@ -1,0 +1,55 @@
+body {
+  margin: 0;
+  padding: 1.25rem clamp(0.75rem, 3vw, 1.5rem) 2rem;
+  max-width: 34rem;
+  font: 13px/1.45 system-ui, sans-serif;
+  color: #a8a8a2;
+  background: #0f1113;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #73736d;
+}
+
+p {
+  margin: 0 0 0.65rem;
+}
+
+ul {
+  margin: 0 0 0.65rem;
+  padding-left: 1.1rem;
+}
+
+li {
+  margin-bottom: 0.35rem;
+}
+
+a {
+  color: #94948e;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #c8c8c2;
+}
+
+.placeholder {
+  color: #6e6758;
+  font-style: italic;
+}
+
+.legal-nav {
+  margin-top: 1.25rem;
+  font-size: 11px;
+  color: #5f5f5a;
+}
+
+.legal-nav a + a::before {
+  content: " · ";
+  color: #454542;
+}

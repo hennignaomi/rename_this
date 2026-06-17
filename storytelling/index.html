@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8' />
+    <title>Re:Name THIS!</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' rel='stylesheet' />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://unpkg.com/scrollama@3.2.0/build/scrollama.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0f1113;
+            --panel: rgba(12, 14, 16, 0.7);
+            --panel-strong: rgba(8, 9, 11, 0.92);
+            --line: rgba(255, 255, 255, 0.1);
+            --text: #f4f4f1;
+            --muted: #b8b8b0;
+            --title: #ff7876;
+            --accent: #ff7876;
+            --gold: #d2a654;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Barlow Condensed", system-ui, sans-serif;
+            font-weight: 400;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        #chrome {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        a,
+        a:hover,
+        a:visited {
+            color: var(--text);
+        }
+
+        #map-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 68, 75, 0.18), transparent 28%),
+                radial-gradient(circle at 80% 0%, rgba(210, 166, 84, 0.14), transparent 24%),
+                #111416;
+        }
+
+        #map {
+            position: absolute;
+            inset: 0;
+            height: 100%;
+            width: 100%;
+            pointer-events: auto;
+        }
+
+        #map-shell {
+            pointer-events: none;
+        }
+
+        #map-shell #map,
+        #map-shell .maplibregl-control-container {
+            pointer-events: auto;
+        }
+
+        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+            margin: 0 10px 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(10, 12, 14, 0.78);
+            backdrop-filter: blur(10px);
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact {
+            color: var(--text);
+            padding-right: 0;
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+            display: block;
+            background-color: transparent;
+            filter: invert(1) brightness(1.25);
+        }
+
+        .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+            display: none !important;
+        }
+
+        .map-overlay {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background:
+                linear-gradient(90deg, rgba(8, 9, 11, 0.72) 0%, rgba(8, 9, 11, 0.38) 30%, rgba(8, 9, 11, 0) 58%),
+                linear-gradient(0deg, rgba(8, 9, 11, 0.76) 0%, rgba(8, 9, 11, 0) 38%);
+        }
+
+        body.basemap-preview .map-overlay {
+            display: none;
+        }
+
+        body.basemap-preview #map-shell {
+            background: #f2f0eb;
+        }
+
+        body.mapbox-basemap #map-shell {
+            background: #e8e4df;
+        }
+
+        body.mapbox-basemap .map-overlay {
+            background:
+                linear-gradient(90deg, rgba(8, 9, 11, 0.42) 0%, rgba(8, 9, 11, 0.18) 32%, rgba(8, 9, 11, 0) 58%),
+                linear-gradient(0deg, rgba(8, 9, 11, 0.45) 0%, rgba(8, 9, 11, 0) 38%);
+        }
+
+        body.intro-chapter-active.mapbox-basemap .map-overlay {
+            background:
+                linear-gradient(90deg, rgba(8, 9, 11, 0.59) 0%, rgba(8, 9, 11, 0.25) 32%, rgba(8, 9, 11, 0) 58%),
+                linear-gradient(0deg, rgba(8, 9, 11, 0.63) 0%, rgba(8, 9, 11, 0) 38%);
+        }
+
+        #story {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #story .step > div,
+        #story #footer {
+            pointer-events: auto;
+        }
+
+        body.map-editing #story {
+            pointer-events: none;
+        }
+
+        #map-zoom-controls {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: auto;
+        }
+
+        #map-zoom-controls button {
+            width: 48px;
+            height: 48px;
+            margin: 0;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 4px;
+            background: rgba(10, 12, 14, 0.82);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            font: 600 26px/1 "Barlow Condensed", system-ui, sans-serif;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: background 180ms ease, border-color 180ms ease, transform 120ms ease;
+        }
+
+        #map-zoom-controls button:hover {
+            background: rgba(22, 24, 26, 0.92);
+            border-color: rgba(255, 255, 255, 0.32);
+        }
+
+        #map-zoom-controls button:active {
+            transform: scale(0.96);
+        }
+
+        #start-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            pointer-events: none;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 520ms ease, visibility 520ms ease;
+        }
+
+        #start-splash img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+        }
+
+        body.map-active #start-splash {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        #scroll-cue {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 35;
+            height: 96px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            color: #4a4a4a;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: lowercase;
+            pointer-events: none;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 360ms ease, visibility 360ms ease;
+        }
+
+        #scroll-cue-arrow {
+            font-size: 33px;
+            line-height: 1;
+        }
+
+        body:not(.start-active) #scroll-cue {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        body:not(.map-active) #map-shell,
+        body:not(.map-active) #map-zoom-controls {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #map-shell,
+        #map-zoom-controls {
+            transition: opacity 520ms ease;
+        }
+
+        body:not(.map-active) #story .step > div {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        body.map-active #story {
+            z-index: 40;
+        }
+
+        #story .step > div {
+            transition: opacity 520ms ease, visibility 520ms ease;
+        }
+
+        #features {
+            padding-top: 100px;
+            padding-bottom: 6vh;
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
+        .step {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 120px 24px 56px;
+            opacity: 1;
+        }
+
+        .lefty {
+            justify-content: flex-start;
+        }
+
+        .centered,
+        .fully {
+            justify-content: center;
+        }
+
+        .righty {
+            justify-content: flex-end;
+        }
+
+        .step > div {
+            width: min(490px, calc(100vw - 56px));
+            border: 1px solid var(--line);
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            box-shadow: var(--shadow);
+            opacity: 1;
+            transition: border-color 260ms ease, box-shadow 260ms ease;
+        }
+
+        .step.active > div {
+            border-color: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+        }
+
+        #dekolonial-berlin.active {
+            pointer-events: none;
+        }
+
+        #dekolonial-berlin.active > .card {
+            pointer-events: none;
+        }
+
+        #dekolonial-berlin.active > .card a {
+            pointer-events: auto;
+        }
+
+        .lefty > div,
+        .centered > div,
+        .fully > div {
+            margin-left: clamp(28px, 4vw, 72px);
+            margin-right: auto;
+        }
+
+        .righty > div {
+            margin-right: clamp(28px, 4vw, 72px);
+        }
+
+        .light,
+        .dark {
+            color: var(--text);
+            background: transparent;
+        }
+
+        .card {
+            padding: clamp(16px, 2.4vw, 28px);
+        }
+
+        .card h3,
+        .card p {
+            margin: 0 0 16px;
+        }
+
+        .card h3 {
+            color: var(--title);
+            font-family: "Oswald", "Arial Narrow", sans-serif;
+            font-weight: 600;
+            font-size: clamp(22px, 2.6vw, 32px);
+            line-height: 1.02;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card p {
+            color: var(--text);
+            font-size: clamp(16px, 1.28vw, 19px);
+            line-height: 1.38;
+            text-align: left;
+        }
+
+        .card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .card .chapter-body p {
+            margin: 0 0 16px;
+            color: var(--text);
+            font-size: clamp(16px, 1.28vw, 19px);
+            line-height: 1.38;
+            text-align: left;
+        }
+
+        .card .chapter-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .card .chapter-body .legal-links {
+            margin-top: 1rem;
+            font-size: 11px;
+            line-height: 1.35;
+            color: rgba(244, 244, 241, 0.42);
+        }
+
+        .card .chapter-body .legal-links a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .card .chapter-body .legal-links a:hover {
+            color: rgba(244, 244, 241, 0.68);
+        }
+
+        .card .chapter-body {
+            --chapter-figure-caption-gap: 18px;
+        }
+
+        .card .chapter-body .chapter-section-spacer {
+            margin: 32px 0 8px;
+        }
+
+        .card .chapter-body .chapter-figure {
+            margin: 16px 0 0;
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure img {
+            margin: 0;
+        }
+
+        .card .chapter-body .chapter-figure figcaption {
+            margin: var(--chapter-figure-caption-gap) 0 0;
+            color: rgba(244, 244, 241, 0.68);
+            font-size: 13px;
+            line-height: 1.35;
+            text-align: left;
+        }
+
+        .card .chapter-body .chapter-figure--half {
+            width: 50%;
+        }
+
+        .card .chapter-body .chapter-figure--half figcaption {
+            text-align: left;
+        }
+
+        .card .chapter-body .chapter-figure--pair-caption .chapter-figure-pair {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure--pair-caption .chapter-figure-pair img {
+            flex: 1 1 50%;
+            min-width: 0;
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card .chapter-body .chapter-figure--pair-caption figcaption {
+            text-align: left;
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-pair {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-split {
+            flex: 1 1 50%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: var(--chapter-figure-caption-gap);
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-image {
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-image img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-image--crop {
+            overflow: hidden;
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-image--crop img {
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .card .chapter-body .chapter-figure--split-crop .chapter-figure-split figcaption {
+            margin: 0;
+            text-align: left;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split figcaption {
+            margin: 0;
+            text-align: left;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            column-gap: 8px;
+            row-gap: var(--chapter-figure-caption-gap);
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split {
+            display: contents;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split:nth-child(1) img {
+            grid-column: 1;
+            grid-row: 1;
+            align-self: end;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split:nth-child(1) figcaption {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split:nth-child(2) img {
+            grid-column: 2;
+            grid-row: 1;
+            align-self: end;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split:nth-child(2) figcaption {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .card .chapter-body .chapter-figure--split .chapter-figure-split img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card .chapter-body .chapter-figure > img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card .chapter-body .chapter-figure--pair .chapter-figure-pair {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .card .chapter-body .chapter-figure--pair .chapter-figure-pair img {
+            flex: 1 1 50%;
+            min-width: 0;
+            width: 100%;
+            height: auto;
+            object-fit: initial;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card .chapter-body .chapter-figure--rotate-left .chapter-figure-rotate {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            line-height: 0;
+            aspect-ratio: 3 / 4;
+            container-type: inline-size;
+        }
+
+        .card .chapter-body .chapter-figure--rotate-left img {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            display: block;
+            width: auto;
+            height: 100cqw;
+            max-width: none;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @supports not (height: 1cqw) {
+            .card .chapter-body .chapter-figure--rotate-left .chapter-figure-rotate {
+                height: 0;
+                padding-bottom: 133.333%;
+            }
+
+            .card .chapter-body .chapter-figure--rotate-left img {
+                height: 75%;
+            }
+        }
+
+        .card p b,
+        .card p strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        #intro.step {
+            justify-content: center;
+            align-items: center;
+        }
+
+        #intro.step > div {
+            width: calc(100vw - clamp(48px, 8vw, 120px));
+            max-width: none;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #intro .chapter-intro__content {
+            min-width: 0;
+        }
+
+        #intro .chapter-intro__title {
+            margin: 0 0 20px;
+            color: var(--accent);
+            font-family: "Oswald", "Arial Narrow", sans-serif;
+            font-weight: 600;
+            font-size: clamp(28px, 3.2vw, 42px);
+            line-height: 1.05;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        #intro .chapter-intro__prose p {
+            margin: 0 0 20px;
+            color: var(--text);
+            font-size: clamp(19px, 1.9vw, 26px);
+            line-height: 1.42;
+            text-align: left;
+        }
+
+        #intro .chapter-intro__prose p:last-child {
+            margin-bottom: 0;
+        }
+
+        #story-hover-popup {
+            position: fixed;
+            z-index: 65;
+            max-width: min(320px, calc(100vw - 24px));
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            box-shadow: var(--shadow);
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.35;
+            pointer-events: none;
+        }
+
+        #story-hover-popup .story-hover-popup-name {
+            display: block;
+            font-weight: 700;
+        }
+
+        #story-hover-popup .story-hover-popup-former {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        #story-hover-popup:has(.story-hover-popup--street) {
+            max-width: min(560px, calc(100vw - 24px));
+            padding: 5px 8px;
+            background: rgba(12, 14, 16, 0.5);
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
+        #story-hover-popup .story-hover-popup--street {
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        #story-hover-popup .story-hover-popup--street .story-hover-popup-name,
+        #story-hover-popup .story-hover-popup--street .story-hover-popup-former {
+            display: inline;
+            margin-top: 0;
+            font-size: inherit;
+            font-weight: 400;
+        }
+
+        #story-hover-popup .story-hover-popup--street .story-hover-popup-name {
+            font-weight: 700;
+        }
+
+        #story-hover-popup strong {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        #story-hover-popup ul {
+            margin: 0;
+            padding-left: 1.1em;
+        }
+
+        #story-hover-popup li {
+            margin-bottom: 4px;
+        }
+
+        .card img {
+            width: 100%;
+            display: block;
+            margin: 0 0 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        #footer {
+            position: relative;
+            z-index: 15;
+            width: min(720px, calc(100vw - 64px));
+            margin: 0 0 40px clamp(52px, 6vw, 96px);
+            padding: 18px 22px;
+            border: 1px solid var(--line);
+            background: rgba(10, 12, 14, 0.7);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            line-height: 1.5;
+            font: 600 12px/1.4 "Barlow Condensed", system-ui, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        #footer p {
+            margin: 0;
+        }
+
+        @media (max-width: 900px) {
+            .map-overlay {
+                background:
+                    linear-gradient(0deg, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.32) 28%, rgba(8, 9, 11, 0) 56%);
+            }
+
+            .centered,
+            .lefty,
+            .righty,
+            .fully {
+                justify-content: center;
+            }
+
+            .step {
+                align-items: flex-end;
+                padding: 108px 14px 24px;
+            }
+
+            #intro.step {
+                align-items: center;
+            }
+
+            #intro.step > div {
+                width: calc(100vw - 28px);
+            }
+
+            #intro .chapter-intro__prose p {
+                font-size: clamp(18px, 4.6vw, 24px);
+            }
+
+            .step > div,
+            .lefty > div,
+            .righty > div,
+            .centered > div,
+            .fully > div,
+            #footer {
+                width: calc(100vw - 28px);
+                margin: 0 auto 24px;
+            }
+
+            #footer {
+                font-size: 11px;
+            }
+        }
+
+        /* Fix touch scrolling on mobile */
+        .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan,
+        .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan .maplibregl-canvas {
+            touch-action: unset;
+        }
+
+        #map-callouts {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 520ms ease, visibility 520ms ease;
+        }
+
+        body.map-active #map-callouts.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #map-callout-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        #map-callout-line,
+        .map-callout-line {
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .map-callout {
+            position: absolute;
+            width: min(280px, calc(100vw - 48px));
+            padding: 12px 14px 10px;
+            border: 1px solid rgba(160, 160, 160, 0.45);
+            background: rgba(220, 220, 220, 0.8);
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+
+        .map-callout-text {
+            margin: 0;
+            color: #111;
+            font-size: 14px;
+            line-height: 1.45;
+            font-weight: 400;
+        }
+
+        .map-callout-text a {
+            color: #111;
+            pointer-events: auto;
+        }
+
+        .map-callout-image {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .map-callout-caption {
+            margin: 6px 0 0;
+            color: rgba(0, 0, 0, 0.68);
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .map-callout-caption a {
+            color: rgba(0, 0, 0, 0.82);
+            pointer-events: auto;
+        }
+
+        @media (max-width: 900px) {
+            .map-callout {
+                width: min(220px, calc(100vw - 32px));
+            }
+
+            .map-callout-text {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body class="start-active">
+
+    <div id="start-splash" aria-hidden="false">
+        <img src="./assets/Titelgrafik.png" alt="Re:Name THIS!" />
+    </div>
+    <div id="scroll-cue" aria-hidden="false">
+        <span id="scroll-cue-arrow" aria-hidden="true">↓</span>
+        <span>scroll</span>
+    </div>
+    <div id="chrome">
+        <nav id="map-zoom-controls" aria-label="Kartenzoom">
+            <button type="button" id="map-zoom-in" title="Hineinzoomen" aria-label="Hineinzoomen">+</button>
+            <button type="button" id="map-zoom-out" title="Herauszoomen" aria-label="Herauszoomen">−</button>
+        </nav>
+    </div>
+    <div id="map-shell">
+        <div id="map"></div>
+        <div class="map-overlay"></div>
+        <div id="map-callouts" aria-hidden="true">
+            <svg id="map-callout-svg" aria-hidden="true">
+                <g id="map-callout-lines"></g>
+                <g id="map-callout-dots"></g>
+            </svg>
+            <div id="map-callout-panel" class="map-callout">
+                <p id="map-callout-text" class="map-callout-text"></p>
+                <img id="map-callout-image" class="map-callout-image" alt="" />
+                <p id="map-callout-caption" class="map-callout-caption"></p>
+            </div>
+        </div>
+    </div>
+    <div id="story"></div>
+
+    <script src="./config.local.js" onerror="console.error('Missing config.local.js — copy config.local.example.js and add your Mapbox token.')"></script>
+    <script src="./config.js?v=20260602o"></script>
+    <script src="./story-layers.js?v=20260602e"></script>
+    <script>
+        var layerTypes = {
+            'fill': ['fill-opacity'],
+            'line': ['line-opacity'],
+            'circle': ['circle-opacity', 'circle-stroke-opacity'],
+            'symbol': ['icon-opacity', 'text-opacity'],
+            'raster': ['raster-opacity'],
+            'fill-extrusion': ['fill-extrusion-opacity'],
+            'heatmap': ['heatmap-opacity']
+        };
+
+        var alignments = {
+            'left': 'lefty',
+            'center': 'centered',
+            'right': 'righty',
+            'full': 'fully'
+        };
+
+        var basemapRoadCaseLayerIds = [
+            'road_service_case', 'road_minor_case', 'road_sec_case_noramp', 'road_pri_case_ramp',
+            'road_pri_case_noramp', 'road_trunk_case_ramp', 'road_trunk_case_noramp',
+            'road_mot_case_ramp', 'road_mot_case_noramp', 'bridge_service_case',
+            'bridge_minor_case', 'bridge_sec_case', 'bridge_pri_case',
+            'bridge_trunk_case', 'bridge_mot_case'
+        ];
+
+        var basemapRoadFillLayerIds = [
+            'road_service_fill', 'road_minor_fill', 'road_sec_fill_noramp', 'road_pri_fill_ramp',
+            'road_pri_fill_noramp', 'road_trunk_fill_ramp', 'road_trunk_fill_noramp',
+            'road_mot_fill_ramp', 'road_mot_fill_noramp', 'bridge_service_fill',
+            'bridge_minor_fill', 'bridge_sec_fill', 'bridge_pri_fill',
+            'bridge_trunk_fill', 'bridge_mot_fill'
+        ];
+        var TEMP_BASEMAP_PREVIEW = false;
+
+        var CAMERA_OVERRIDE_STORAGE_KEY = 'storytelling-map-camera-overrides';
+        var streetHighlightColors = {};
+        var streetGlowLayerIds = {};
+        var streetNamesByLayer = {};
+        var streetBoundsByLayer = {};
+        var highlightedStreetNameSet = new Set();
+        var pruneStreetBranchNameSet = new Set(['Adlergestell', 'Karl-Marx-Allee']);
+        var pruneStreetBranchMaxLengthByName = {
+            'Adlergestell': 90,
+            'Karl-Marx-Allee': 120
+        };
+        var currentChapterIndex = 0;
+        var isMapEditMode = false;
+        var hasInitializedFirstChapter = false;
+        var pendingStreetHighlightChapterId = null;
+        var pendingStreetHighlightTimer = null;
+        var activeStreetHighlightChapterId = null;
+        var activeStreetHighlightStartedAt = 0;
+        var pendingStreetApplyFrame = null;
+        var highlightStreetLayerConfigs = [];
+        var highlightLayersReady = false;
+        var prefetchedTileUrlSet = new Set();
+        var satelliteDataReady = false;
+        var satelliteDataPromise = null;
+        var streetDataReady = false;
+        var streetDataPromise = null;
+        var femaleStreetLayerId = 'female-streets';
+        var maleStreetLayerId = 'male-streets';
+        var femaleStreetSourceId = 'female-streets-source';
+        var maleStreetSourceId = 'male-streets-source';
+        var excludedGenderStreetNamePattern = /^(?:\d|A\s?\d|\d{2,})|\b(?:AS|AD|Einf|Ausf)\b|Hauptfahrbahn|Verbfb/i;
+        var femaleStreetNameParts = new Set([
+            'Adelheid', 'Alice', 'Amalie', 'Anna', 'Antonie', 'Auguste', 'Babette', 'Bella', 'Berta', 'Bertha',
+            'Bettina', 'Betty', 'Cauer', 'Charlotte', 'Christine', 'Clara', 'Dorothea', 'Elfriede', 'Elisabeth',
+            'Elsa', 'Else', 'Emma', 'Eva', 'Flora', 'Frieda', 'Friede', 'Gertrud', 'Gertrude', 'Gisela', 'Grete',
+            'Gretel', 'Hanna', 'Hannah', 'Hedwig', 'Helene', 'Henriette', 'Hermine', 'Hilde', 'Hildegard', 'Ida',
+            'Ilse', 'Inge', 'Ingeborg', 'Irma', 'Irmgard', 'Johanna', 'Josephine', 'Julia', 'Juliane', 'Karoline',
+            'Katharina', 'Klara', 'Kollwitz', 'Käte', 'Käthe', 'Lange', 'Lena', 'Leonore', 'Leopoldine', 'Lina',
+            'Lisa', 'Lisbeth', 'Lotte', 'Louise', 'Luise', 'Luxemburg', 'Magdalena', 'Margarete', 'Margarethe',
+            'Maria', 'Marie', 'Marlene', 'Marta', 'Martha', 'Mathilde', 'Minna', 'Monika', 'Nelly', 'Ottilie',
+            'Paula', 'Pauline', 'Rahel', 'Regine', 'Renate', 'Rita', 'Rosa', 'Rosalie', 'Sibylle', 'Sidonie',
+            'Sofie', 'Sophie', 'Susanne', 'Thea', 'Thekla', 'Theresia', 'Trude', 'Trudi', 'Ulrike', 'Ursula',
+            'Veronika', 'Viktoria', 'Viola', 'Walburga', 'Wally', 'Walpurga', 'Wanda', 'Wilhelmine', 'Yvonne',
+            'Zetkin'
+        ]);
+        var maleStreetNameParts = new Set([
+            'Adalbert', 'Albert', 'Albrecht', 'Alexander', 'Alfred', 'Alois', 'Andreas', 'Anton', 'August', 'Axel',
+            'Benno', 'Bernhard', 'Bruno', 'Carl', 'Caspar', 'Christian', 'Christoph', 'Conrad', 'Daniel', 'David',
+            'Dietrich', 'Eduard', 'Emanuel', 'Emil', 'Erich', 'Ernst', 'Eugen', 'Felix', 'Ferdinand', 'Franz',
+            'Friedrich', 'Fritz', 'Georg', 'Gerhard', 'Gottfried', 'Gustav', 'Hans', 'Heinrich', 'Helmuth',
+            'Hermann', 'Jakob', 'Joachim', 'Johann', 'Johannes', 'Josef', 'Julius', 'Karl', 'Konrad', 'Kurt', 'Leo',
+            'Leopold', 'Ludwig', 'Magnus', 'Martin', 'Matthias', 'Max', 'Michael', 'Moritz', 'Nikolaus', 'Norbert',
+            'Otto', 'Paul', 'Peter', 'Philipp', 'Richard', 'Robert', 'Rudolf', 'Samuel', 'Sebastian', 'Sigmund',
+            'Stefan', 'Theodor', 'Thomas', 'Ulrich', 'Victor', 'Viktor', 'Walter', 'Werner', 'Wilhelm', 'Willy',
+            'Wolfgang', 'Adenauer', 'Bebel', 'Behring', 'Bismarck', 'Böckler', 'Brandt', 'Brecht', 'Curie',
+            'Diesel', 'Dohm', 'Dürer', 'Ebert', 'Einstein', 'Eisler', 'Engels', 'Fontane', 'Forster', 'Freud',
+            'Gaulle', 'Gauss', 'Goethe', 'Gropius', 'Gutenberg', 'Haeckel', 'Händel', 'Heine', 'Helmholtz',
+            'Humboldt', 'Jahn', 'Kant', 'Kepler', 'Kleist', 'Klopstock', 'Körner', 'Lassalle', 'Leibniz',
+            'Liebknecht', 'Lortzing', 'Mann', 'Marx', 'Mendelsohn', 'Menzel', 'Mierendorff', 'Mozart', 'Mühsam',
+            'Müller', 'Nansen', 'Newton', 'Nobel', 'Pestalozzi', 'Planck', 'Raabe', 'Rembrandt', 'Rilke', 'Röntgen',
+            'Scharnhorst', 'Schiller', 'Schinkel', 'Schliemann', 'Schlüter', 'Schumann', 'Siemens', 'Stein',
+            'Stresemann', 'Tucholsky', 'Virchow', 'Wagner', 'Weber', 'Wichert', 'Winckelmann', 'Winkelmann', 'Zola'
+        ]);
+
+        function roundNumber(value, digits) {
+            return Number(value.toFixed(digits));
+        }
+
+        function endpointKey(coord) {
+            return roundNumber(coord[0], 6) + ',' + roundNumber(coord[1], 6);
+        }
+
+        function getSavedCameraOverrides() {
+            try {
+                return JSON.parse(window.localStorage.getItem(CAMERA_OVERRIDE_STORAGE_KEY) || '{}');
+            } catch (err) {
+                return {};
+            }
+        }
+
+        function applySavedCameraOverrides() {
+            var overrides = getSavedCameraOverrides();
+            config.chapters.forEach(function (chapter) {
+                var override = overrides[chapter.id];
+                if (!override) return;
+                chapter.location = override.location;
+                chapter.fitToStreetBounds = false;
+            });
+        }
+
+        applySavedCameraOverrides();
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function smoothstep(edge0, edge1, value) {
+            var t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+            return t * t * (3 - 2 * t);
+        }
+
+        function hexToRgb(hex) {
+            var normalized = hex.replace('#', '');
+            return {
+                r: parseInt(normalized.slice(0, 2), 16),
+                g: parseInt(normalized.slice(2, 4), 16),
+                b: parseInt(normalized.slice(4, 6), 16)
+            };
+        }
+
+        function mixColors(startHex, endHex, amount) {
+            var start = hexToRgb(startHex);
+            var end = hexToRgb(endHex);
+            var t = clamp(amount, 0, 1);
+            return 'rgb(' + Math.round(start.r + (end.r - start.r) * t) + ', ' +
+                Math.round(start.g + (end.g - start.g) * t) + ', ' +
+                Math.round(start.b + (end.b - start.b) * t) + ')';
+        }
+
+        function isStreetHighlightLayer(layerId) {
+            return Boolean(streetHighlightColors[layerId]);
+        }
+
+        function getStreetHighlightLayers(chapterItems) {
+            return chapterItems
+                .map(function (item) { return item.layer; })
+                .filter(isStreetHighlightLayer);
+        }
+
+        function getStreetHighlightItems(chapterItems) {
+            return chapterItems.filter(function (item) {
+                return isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function getNonStreetHighlightItems(chapterItems) {
+            return chapterItems.filter(function (item) {
+                return !isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function setStreetHighlightProgress(layerId, progress) {
+            if (!map.getLayer(layerId)) return;
+
+            var t = clamp(progress, 0, 1);
+            var glowLayerId = streetGlowLayerIds[layerId];
+            var targetColor = streetHighlightColors[layerId];
+            var glowOpacity = 0.22 * smoothstep(0.02, 0.22, t);
+            var coreOpacity = 0.82 * smoothstep(0.08, 0.38, t);
+            var colorMix = smoothstep(0.2, 0.88, t);
+            var widthMix = smoothstep(0.32, 1, t);
+            var glowWidthMix = smoothstep(0.06, 0.44, t);
+
+            if (glowLayerId && map.getLayer(glowLayerId)) {
+                map.setPaintProperty(glowLayerId, 'line-color', targetColor);
+                map.setPaintProperty(glowLayerId, 'line-opacity', glowOpacity);
+                map.setPaintProperty(glowLayerId, 'line-width', 7 + 3 * glowWidthMix);
+            }
+
+            map.setPaintProperty(layerId, 'line-color', mixColors('#ffffff', targetColor, colorMix));
+            map.setPaintProperty(layerId, 'line-opacity', coreOpacity);
+            map.setPaintProperty(layerId, 'line-width', 3.4 + 1.6 * widthMix);
+        }
+
+        function setStreetHighlightFadeFactor(layerId, factor) {
+            if (!map.getLayer(layerId)) return;
+
+            var t = clamp(factor, 0, 1);
+            var glowLayerId = streetGlowLayerIds[layerId];
+
+            map.setPaintProperty(layerId, 'line-opacity-transition', { duration: 180 });
+            map.setPaintProperty(layerId, 'line-opacity', 1 * t);
+
+            if (glowLayerId && map.getLayer(glowLayerId)) {
+                map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: 180 });
+                map.setPaintProperty(glowLayerId, 'line-opacity', 0.04 * t);
+            }
+        }
+
+        function updateStreetHighlightFadeForChapter(chapter, progress) {
+            if (activeStreetHighlightChapterId !== chapter.id) return;
+
+            if (Date.now() - activeStreetHighlightStartedAt < 1400) {
+                return;
+            }
+
+            var fadeFactor = 1 - smoothstep(0.84, 0.985, progress);
+            getStreetHighlightLayers(chapter.onChapterEnter || []).forEach(function (layerId) {
+                setStreetHighlightFadeFactor(layerId, fadeFactor);
+            });
+        }
+
+        function applyChapterLayerState(chapterItems, entering) {
+            chapterItems.forEach(function (item) {
+                setLayerOpacity(item);
+            });
+        }
+
+        function primeStreetHighlightItems(chapterItems) {
+            chapterItems.forEach(function (item) {
+                var layerId = item.layer;
+                var glowLayerId = streetGlowLayerIds[layerId];
+                if (!map.getLayer(layerId)) return;
+
+                map.setPaintProperty(layerId, 'line-color-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-opacity-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-width-transition', { duration: 0 });
+                map.setPaintProperty(layerId, 'line-color', '#ffffff');
+                map.setPaintProperty(layerId, 'line-opacity', 0);
+                map.setPaintProperty(layerId, 'line-width', 3.4);
+
+                if (glowLayerId && map.getLayer(glowLayerId)) {
+                    map.setPaintProperty(glowLayerId, 'line-color-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-width-transition', { duration: 0 });
+                    map.setPaintProperty(glowLayerId, 'line-color', item.color || streetHighlightColors[layerId]);
+                    map.setPaintProperty(glowLayerId, 'line-opacity', 0);
+                    map.setPaintProperty(glowLayerId, 'line-width', 7);
+                }
+            });
+        }
+
+        function clearPendingStreetHighlight() {
+            if (pendingStreetHighlightTimer) {
+                window.clearTimeout(pendingStreetHighlightTimer);
+                pendingStreetHighlightTimer = null;
+            }
+            if (pendingStreetApplyFrame) {
+                window.cancelAnimationFrame(pendingStreetApplyFrame);
+                pendingStreetApplyFrame = null;
+            }
+        }
+
+        function areStreetHighlightLayersReady(chapter) {
+            return getStreetHighlightLayers(chapter.onChapterEnter || []).every(function (layerId) {
+                return !!map.getLayer(layerId);
+            });
+        }
+
+        function activatePendingStreetHighlight(chapterId) {
+            if (pendingStreetHighlightChapterId !== chapterId) return;
+
+            var chapter = config.chapters.find(function (chap) {
+                return chap.id === chapterId;
+            });
+            if (!chapter) return;
+
+            if (!areStreetHighlightLayersReady(chapter)) {
+                clearPendingStreetHighlight();
+                pendingStreetHighlightTimer = window.setTimeout(function () {
+                    activatePendingStreetHighlight(chapterId);
+                }, 250);
+                return;
+            }
+
+            if (map.isMoving && map.isMoving()) {
+                map.once('moveend', function () {
+                    activatePendingStreetHighlight(chapterId);
+                });
+                return;
+            }
+
+            var streetItems = getStreetHighlightItems(chapter.onChapterEnter || []);
+            primeStreetHighlightItems(streetItems);
+            pendingStreetApplyFrame = window.requestAnimationFrame(function () {
+                pendingStreetApplyFrame = window.requestAnimationFrame(function () {
+                    pendingStreetApplyFrame = null;
+                    applyChapterLayerState(streetItems, true);
+                });
+            });
+            activeStreetHighlightChapterId = chapterId;
+            activeStreetHighlightStartedAt = Date.now();
+            pendingStreetHighlightChapterId = null;
+            pendingStreetHighlightTimer = null;
+        }
+
+        function scheduleStreetHighlightStart(chapter) {
+            var streetItems = getStreetHighlightItems(chapter.onChapterEnter || []);
+            if (!streetItems.length) return;
+
+            pendingStreetHighlightChapterId = chapter.id;
+            clearPendingStreetHighlight();
+            pendingStreetHighlightTimer = window.setTimeout(function () {
+                activatePendingStreetHighlight(chapter.id);
+            }, 220);
+        }
+
+        function extendBoundsWithCoordinates(bounds, coordinates) {
+            if (!Array.isArray(coordinates)) return bounds;
+
+            if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+                if (!bounds) {
+                    return [coordinates[0], coordinates[1], coordinates[0], coordinates[1]];
+                }
+                bounds[0] = Math.min(bounds[0], coordinates[0]);
+                bounds[1] = Math.min(bounds[1], coordinates[1]);
+                bounds[2] = Math.max(bounds[2], coordinates[0]);
+                bounds[3] = Math.max(bounds[3], coordinates[1]);
+                return bounds;
+            }
+
+            coordinates.forEach(function (child) {
+                bounds = extendBoundsWithCoordinates(bounds, child);
+            });
+            return bounds;
+        }
+
+        function getLineCoordinates(feature) {
+            var geometry = feature.geometry || {};
+            if (geometry.type === 'LineString') return geometry.coordinates || [];
+            if (geometry.type === 'MultiLineString') return (geometry.coordinates && geometry.coordinates[0]) || [];
+            return [];
+        }
+
+        function getLineLengthMeters(coords) {
+            var total = 0;
+            for (var i = 1; i < coords.length; i += 1) {
+                var a = coords[i - 1];
+                var b = coords[i];
+                var dx = (b[0] - a[0]) * 111320 * Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180);
+                var dy = (b[1] - a[1]) * 110540;
+                total += Math.sqrt(dx * dx + dy * dy);
+            }
+            return total;
+        }
+
+        function trimLineEnd(coords, trimMeters) {
+            if (!coords || coords.length < 2 || trimMeters <= 0) return coords;
+
+            var remaining = trimMeters;
+            var trimmed = coords.slice();
+
+            while (trimmed.length > 1 && remaining > 0) {
+                var last = trimmed[trimmed.length - 1];
+                var prev = trimmed[trimmed.length - 2];
+                var segmentLength = getLineLengthMeters([prev, last]);
+
+                if (segmentLength <= remaining) {
+                    trimmed.pop();
+                    remaining -= segmentLength;
+                    continue;
+                }
+
+                var ratio = (segmentLength - remaining) / segmentLength;
+                trimmed[trimmed.length - 1] = [
+                    prev[0] + (last[0] - prev[0]) * ratio,
+                    prev[1] + (last[1] - prev[1]) * ratio
+                ];
+                remaining = 0;
+            }
+
+            return trimmed;
+        }
+
+        function getGenderStreetNameParts(streetName) {
+            if (!streetName || excludedGenderStreetNamePattern.test(streetName)) return [];
+
+            var cleaned = streetName
+                .replace(
+                    /(straße|strasse|-Str\.|allee|weg|platz|damm|chaussee|ring|gasse|steig|pfad|zeile|promenade|ufer|korso|terrasse|brücke|markt|steg|kai|bogen|tunnel|park|hain)$/i,
+                    ''
+                )
+                .trim()
+                .replace(/-$/, '');
+
+            return cleaned.split(/[-\s/()]+/).filter(Boolean);
+        }
+
+        function classifyStreetGender(streetName) {
+            var parts = getGenderStreetNameParts(streetName);
+            if (!parts.length) return null;
+
+            var hasFemale = parts.some(function (part) {
+                return femaleStreetNameParts.has(part);
+            });
+            var hasMale = parts.some(function (part) {
+                return maleStreetNameParts.has(part);
+            });
+
+            if (hasFemale === hasMale) return null;
+            return hasFemale ? 'female' : 'male';
+        }
+
+        function buildGenderStreetGeojson(geojson, gender) {
+            return {
+                type: 'FeatureCollection',
+                features: (geojson.features || []).filter(function (feature) {
+                    var streetName = feature.properties && feature.properties.strname;
+                    return classifyStreetGender(streetName) === gender;
+                })
+            };
+        }
+
+        function pruneStreetBranchFeatures(features, maxLeafLengthMeters) {
+            if (features.length <= 1) return features.slice();
+
+            var kept = features.slice();
+            var changed = true;
+
+            while (changed && kept.length > 1) {
+                changed = false;
+                var degrees = {};
+
+                kept.forEach(function (feature) {
+                    var coords = getLineCoordinates(feature);
+                    if (coords.length < 2) return;
+                    var startKey = endpointKey(coords[0]);
+                    var endKey = endpointKey(coords[coords.length - 1]);
+                    degrees[startKey] = (degrees[startKey] || 0) + 1;
+                    degrees[endKey] = (degrees[endKey] || 0) + 1;
+                });
+
+                var next = [];
+                kept.forEach(function (feature) {
+                    var coords = getLineCoordinates(feature);
+                    if (coords.length < 2) {
+                        next.push(feature);
+                        return;
+                    }
+
+                    var startKey = endpointKey(coords[0]);
+                    var endKey = endpointKey(coords[coords.length - 1]);
+                    var isLeaf = (degrees[startKey] === 1 || degrees[endKey] === 1);
+                    var isShort = (feature.properties && feature.properties.__segment_length_m || 0) < maxLeafLengthMeters;
+
+                    if (isLeaf && isShort && kept.length > 1) {
+                        changed = true;
+                        return;
+                    }
+
+                    next.push(feature);
+                });
+
+                if (next.length === 0) break;
+                kept = next;
+            }
+
+            return kept;
+        }
+
+        function shouldPruneStreetBranches(streetName) {
+            return pruneStreetBranchNameSet.has(streetName);
+        }
+
+        function getPruneStreetBranchMaxLength(streetName) {
+            return pruneStreetBranchMaxLengthByName[streetName] || 90;
+        }
+
+        function buildHighlightStreetGeojson(geojson) {
+            var cloned = {};
+            var grouped = {};
+
+            (geojson.features || []).forEach(function (feature) {
+                var streetName = feature.properties && feature.properties.strname;
+                if (!highlightedStreetNameSet.has(streetName)) return;
+
+                var copy = JSON.parse(JSON.stringify(feature));
+                copy.properties = copy.properties || {};
+                if (streetName === 'Eiergasse') {
+                    copy.geometry.coordinates = trimLineEnd(copy.geometry.coordinates, 11);
+                }
+                copy.properties.__segment_length_m = roundNumber(getLineLengthMeters(getLineCoordinates(copy)), 1);
+                if (!grouped[streetName]) grouped[streetName] = [];
+                grouped[streetName].push(copy);
+            });
+
+            cloned.type = 'FeatureCollection';
+            cloned.features = [];
+
+            Object.keys(grouped).forEach(function (streetName) {
+                cloned.features = cloned.features.concat(
+                    shouldPruneStreetBranches(streetName)
+                        ? pruneStreetBranchFeatures(grouped[streetName], getPruneStreetBranchMaxLength(streetName))
+                        : grouped[streetName]
+                );
+            });
+
+            return cloned;
+        }
+
+        function chapterNeedsStreetData(chapter) {
+            if (TEMP_BASEMAP_PREVIEW) return false;
+            return (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'all-streets-context-thin' ||
+                    item.layer === femaleStreetLayerId ||
+                    item.layer === maleStreetLayerId ||
+                    isStreetHighlightLayer(item.layer);
+            });
+        }
+
+        function chapterNeedsSatellite(chapter) {
+            if (TEMP_BASEMAP_PREVIEW) return false;
+            return (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'satellite-imagery';
+            });
+        }
+
+        function getSatelliteInsertBeforeId() {
+            if (map.getLayer('all-streets-context-thin')) return 'all-streets-context-thin';
+
+            for (var i = 0; i < highlightStreetLayerConfigs.length; i += 1) {
+                if (map.getLayer(highlightStreetLayerConfigs[i].id)) {
+                    return highlightStreetLayerConfigs[i].id;
+                }
+            }
+
+            return undefined;
+        }
+
+        function ensureSatelliteReady() {
+            if (TEMP_BASEMAP_PREVIEW) return Promise.resolve();
+            if (satelliteDataReady) return Promise.resolve();
+            if (satelliteDataPromise) return satelliteDataPromise;
+
+            satelliteDataPromise = Promise.resolve().then(function () {
+                if (!map.getSource('satellite')) {
+                    map.addSource('satellite', {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                    });
+                }
+
+                if (!map.getLayer('satellite-imagery')) {
+                    map.addLayer({
+                        id: 'satellite-imagery',
+                        type: 'raster',
+                        source: 'satellite',
+                        paint: { 'raster-opacity': 0 }
+                    }, getSatelliteInsertBeforeId());
+                }
+
+                satelliteDataReady = true;
+                var activeChapter = config.chapters[currentChapterIndex];
+                if (activeChapter) {
+                    applyChapterLayerState(getNonStreetHighlightItems(activeChapter.onChapterEnter || []), true);
+                }
+            }).catch(function () {
+                satelliteDataPromise = null;
+            });
+
+            return satelliteDataPromise;
+        }
+
+        function ensureStreetDataReady() {
+            if (TEMP_BASEMAP_PREVIEW) return Promise.resolve();
+            if (streetDataReady) return Promise.resolve();
+            if (streetDataPromise) return streetDataPromise;
+
+            streetDataPromise = fetch('./data/strassen_berlin_wgs84.geojson')
+                .then(function (response) { return response.json(); })
+                .then(function (geojson) {
+                    if (!geojson.features) return;
+
+                    if (map.getSource('strassen')) {
+                        map.getSource('strassen').setData(geojson);
+                    } else {
+                        map.addSource('strassen', {
+                            type: 'geojson',
+                            data: geojson
+                        });
+
+                        map.addLayer({
+                            id: 'all-streets-context-thin',
+                            type: 'line',
+                            source: 'strassen',
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#f2efe8',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    14, 0.45,
+                                    16, 0.7,
+                                    18, 1.05
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    var femaleStreetGeojson = buildGenderStreetGeojson(geojson, 'female');
+                    var maleStreetGeojson = buildGenderStreetGeojson(geojson, 'male');
+
+                    if (map.getSource(maleStreetSourceId)) {
+                        map.getSource(maleStreetSourceId).setData(maleStreetGeojson);
+                    } else {
+                        map.addSource(maleStreetSourceId, {
+                            type: 'geojson',
+                            data: maleStreetGeojson
+                        });
+
+                        map.addLayer({
+                            id: maleStreetLayerId,
+                            type: 'line',
+                            source: maleStreetSourceId,
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#f2efe8',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 0.32,
+                                    12, 0.48,
+                                    15, 0.8
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    if (map.getSource(femaleStreetSourceId)) {
+                        map.getSource(femaleStreetSourceId).setData(femaleStreetGeojson);
+                    } else {
+                        map.addSource(femaleStreetSourceId, {
+                            type: 'geojson',
+                            data: femaleStreetGeojson
+                        });
+
+                        map.addLayer({
+                            id: femaleStreetLayerId,
+                            type: 'line',
+                            source: femaleStreetSourceId,
+                            layout: {
+                                'line-cap': 'round',
+                                'line-join': 'round'
+                            },
+                            paint: {
+                                'line-color': '#ff5a5f',
+                                'line-width': [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 0.42,
+                                    12, 0.62,
+                                    15, 1.05
+                                ],
+                                'line-opacity': 0
+                            }
+                        });
+                    }
+
+                    geojson.features.forEach(function (feature) {
+                        var streetName = feature.properties && feature.properties.strname;
+                        if (!streetName) return;
+
+                        Object.keys(streetNamesByLayer).forEach(function (layerId) {
+                            if (streetNamesByLayer[layerId].indexOf(streetName) === -1) return;
+                            streetBoundsByLayer[layerId] = extendBoundsWithCoordinates(
+                                streetBoundsByLayer[layerId] || null,
+                                feature.geometry && feature.geometry.coordinates
+                            );
+                        });
+                    });
+
+                    var highlightGeojson = buildHighlightStreetGeojson(geojson);
+                    if (map.getSource('highlight-strassen')) {
+                        map.getSource('highlight-strassen').setData(highlightGeojson);
+                    } else {
+                        map.addSource('highlight-strassen', {
+                            type: 'geojson',
+                            data: highlightGeojson
+                        });
+                        highlightStreetLayerConfigs.forEach(function (l) {
+                            map.addLayer({
+                                id: streetGlowLayerIds[l.id],
+                                type: 'line',
+                                source: 'highlight-strassen',
+                                filter: l.filter,
+                                layout: {
+                                    'line-cap': 'butt',
+                                    'line-join': 'miter'
+                                },
+                                paint: {
+                                    'line-color': l.color,
+                                    'line-width': 10,
+                                    'line-blur': 2,
+                                    'line-opacity': 0
+                                }
+                            });
+
+                            map.addLayer({
+                                id: l.id,
+                                type: 'line',
+                                source: 'highlight-strassen',
+                                filter: l.filter,
+                                layout: {
+                                    'line-cap': 'butt',
+                                    'line-join': 'miter'
+                                },
+                                paint: {
+                                    'line-color': '#ffffff',
+                                    'line-width': 4,
+                                    'line-opacity': 0
+                                }
+                            });
+                        });
+                    }
+
+                    highlightLayersReady = true;
+                    streetDataReady = true;
+                    var activeChapter = config.chapters[currentChapterIndex];
+                    if (activeChapter) {
+                        applyChapterLayerState(getNonStreetHighlightItems(activeChapter.onChapterEnter || []), true);
+                        if (getStreetHighlightItems(activeChapter.onChapterEnter || []).length) {
+                            scheduleStreetHighlightStart(activeChapter);
+                        }
+                    }
+                })
+                .catch(function () {
+                    // Fall back to configured chapter locations if bounds loading fails.
+                    streetDataPromise = null;
+                });
+
+            return streetDataPromise;
+        }
+
+        function preloadStreetDataInBackground() {
+            if (streetDataReady || streetDataPromise) return;
+
+            var startPreload = function () {
+                ensureStreetDataReady();
+            };
+
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(startPreload, { timeout: 1500 });
+            } else {
+                window.setTimeout(startPreload, 450);
+            }
+        }
+
+        function lngLatToWorldPixel(lng, lat, z) {
+            var scale = 256 * Math.pow(2, z);
+            var sinLat = Math.sin(lat * Math.PI / 180);
+            var x = (lng + 180) / 360 * scale;
+            var y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+            return { x: x, y: y };
+        }
+
+        function normalizeTileX(x, z) {
+            var worldSize = Math.pow(2, z);
+            return ((x % worldSize) + worldSize) % worldSize;
+        }
+
+        function buildRasterTileUrl(template, z, x, y) {
+            return template
+                .replace('{z}', String(z))
+                .replace('{x}', String(x))
+                .replace('{y}', String(y));
+        }
+
+        function getChapterPrefetchZoomLevels(chapter) {
+            var base = chapter.location.zoom + 1;
+            var levels = [Math.floor(base), Math.ceil(base)];
+            return levels.filter(function (value, index, list) {
+                return value >= 0 && value <= 22 && list.indexOf(value) === index;
+            });
+        }
+
+        function getChapterPrefetchTileUrls(chapter, template) {
+            if (!map || !map.getCanvas()) return [];
+
+            var canvas = map.getCanvas();
+            var dpr = window.devicePixelRatio || 1;
+            var width = (canvas.clientWidth || window.innerWidth) * dpr;
+            var height = (canvas.clientHeight || window.innerHeight) * dpr;
+            var padding = getChapterPadding(chapter);
+            var left = (padding.left || 0) * dpr;
+            var right = (padding.right || 0) * dpr;
+            var top = (padding.top || 0) * dpr;
+            var bottom = (padding.bottom || 0) * dpr;
+            var screenCenterX = width / 2 + (left - right) / 2;
+            var screenCenterY = height / 2 + (top - bottom) / 2;
+            var margin = 384;
+            var urls = [];
+
+            getChapterPrefetchZoomLevels(chapter).forEach(function (z) {
+                var center = lngLatToWorldPixel(chapter.location.center[0], chapter.location.center[1], z);
+                var minPixelX = center.x - screenCenterX - margin;
+                var maxPixelX = center.x + (width - screenCenterX) + margin;
+                var minPixelY = center.y - screenCenterY - margin;
+                var maxPixelY = center.y + (height - screenCenterY) + margin;
+                var tileMinX = Math.floor(minPixelX / 256);
+                var tileMaxX = Math.floor(maxPixelX / 256);
+                var tileMinY = Math.max(0, Math.floor(minPixelY / 256));
+                var tileMaxY = Math.min(Math.pow(2, z) - 1, Math.floor(maxPixelY / 256));
+
+                for (var tileX = tileMinX; tileX <= tileMaxX; tileX += 1) {
+                    for (var tileY = tileMinY; tileY <= tileMaxY; tileY += 1) {
+                        urls.push(buildRasterTileUrl(template, z, normalizeTileX(tileX, z), tileY));
+                    }
+                }
+            });
+
+            return urls;
+        }
+
+        function prefetchRasterTilesForChapter(chapter, template) {
+            getChapterPrefetchTileUrls(chapter, template).forEach(function (url) {
+                if (prefetchedTileUrlSet.has(url)) return;
+                prefetchedTileUrlSet.add(url);
+                window.fetch(url, { mode: 'no-cors', cache: 'force-cache', credentials: 'omit' }).catch(function () {
+                    prefetchedTileUrlSet.delete(url);
+                });
+            });
+        }
+
+        function prefetchChapterResources(chapter) {
+            if (!chapter) return;
+
+            if (chapterNeedsStreetData(chapter)) {
+                ensureStreetDataReady();
+            }
+
+            var tonerPrefetchUrl = (config.style.sources.carto.tiles || [])[0] || '';
+            if (tonerPrefetchUrl) {
+                prefetchRasterTilesForChapter(chapter, tonerPrefetchUrl);
+            }
+
+            if (chapterNeedsSatellite(chapter)) {
+                prefetchRasterTilesForChapter(
+                    chapter,
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                );
+            }
+        }
+
+        function shouldUseStreetBounds(chapter) {
+            if (chapter.fitToStreetBounds === false) return false;
+
+            var streetLayers = getStreetHighlightLayers(chapter.onChapterEnter || []);
+            var hasSatellite = (chapter.onChapterEnter || []).some(function (item) {
+                return item.layer === 'satellite-imagery';
+            });
+            return streetLayers.length === 1 && !hasSatellite;
+        }
+
+        function getChapterStreetBounds(chapter) {
+            if (!shouldUseStreetBounds(chapter)) return null;
+
+            var layerId = getStreetHighlightLayers(chapter.onChapterEnter)[0];
+            var bounds = streetBoundsByLayer[layerId];
+            if (!bounds) return null;
+
+            return [
+                [bounds[0], bounds[1]],
+                [bounds[2], bounds[3]]
+            ];
+        }
+
+        function getLayerPaintType(layer) {
+            var mapLayer = map.getLayer(layer);
+            if (!mapLayer) return null;
+            return layerTypes[mapLayer.type];
+        }
+
+        function setLayerOpacity(layer) {
+            if (TEMP_BASEMAP_PREVIEW) {
+                if (
+                    layer.layer === 'satellite-imagery' ||
+                    layer.layer === 'all-streets-context-thin' ||
+                    layer.layer === femaleStreetLayerId ||
+                    layer.layer === maleStreetLayerId ||
+                    isStreetHighlightLayer(layer.layer)
+                ) {
+                    return;
+                }
+            }
+
+            var mapLayer = map.getLayer(layer.layer);
+            if (!mapLayer) return;
+            var layerType = mapLayer.type;
+
+            if (layerType === 'line' && streetHighlightColors[layer.layer]) {
+                var highlightColor = layer.color || (layer.opacity > 0 ? streetHighlightColors[layer.layer] : '#ffffff');
+                var highlightOpacity = layer.highlightOpacity != null
+                    ? layer.highlightOpacity
+                    : (layer.opacity > 0 ? 1 : layer.opacity);
+                var highlightWidth = layer.highlightWidth != null
+                    ? layer.highlightWidth
+                    : (layer.opacity > 0 ? 5 : 3.4);
+                var opacityDuration = layer.opacity > 0 ? Math.min(layer.duration || 5000, 5000) : 500;
+                var colorDuration = layer.opacity > 0 ? 3200 : 400;
+                var widthDuration = layer.opacity > 0 ? 1400 : 320;
+                var glowLayerId = streetGlowLayerIds[layer.layer];
+
+                if (layer.duration) {
+                    map.setPaintProperty(layer.layer, 'line-color-transition', { duration: colorDuration });
+                    map.setPaintProperty(layer.layer, 'line-opacity-transition', { duration: opacityDuration });
+                    map.setPaintProperty(layer.layer, 'line-width-transition', { duration: widthDuration });
+                    if (glowLayerId) {
+                        map.setPaintProperty(glowLayerId, 'line-opacity-transition', { duration: layer.opacity > 0 ? 1100 : 260 });
+                    }
+                }
+
+                if (glowLayerId) {
+                    map.setPaintProperty(glowLayerId, 'line-color', highlightColor);
+                    map.setPaintProperty(glowLayerId, 'line-opacity', layer.opacity > 0 ? 0.04 : 0);
+                }
+                map.setPaintProperty(layer.layer, 'line-color', highlightColor);
+                map.setPaintProperty(layer.layer, 'line-opacity', highlightOpacity);
+                map.setPaintProperty(layer.layer, 'line-width', highlightWidth);
+                return;
+            }
+
+            var paintProps = layerTypes[layerType];
+            paintProps.forEach(function (prop) {
+                if (layer.duration) {
+                    map.setPaintProperty(layer.layer, prop + '-transition', { duration: layer.duration });
+                }
+                map.setPaintProperty(layer.layer, prop, layer.opacity);
+            });
+        }
+
+        function setPaintIfLayerExists(layerId, prop, value) {
+            if (map.getLayer(layerId)) {
+                try {
+                    map.setPaintProperty(layerId, prop, value);
+                } catch (err) {
+                    // Ignore unsupported paint properties on third-party basemap layers.
+                }
+            }
+        }
+
+        function setBasemapRoadPalette(caseColor, fillColor, transitionDuration) {
+            basemapRoadCaseLayerIds.forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-color-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-color', caseColor);
+            });
+
+            basemapRoadFillLayerIds.forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-color-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-color', fillColor);
+            });
+        }
+
+        function setBasemapRoadOpacity(opacity, transitionDuration) {
+            basemapRoadCaseLayerIds.concat(basemapRoadFillLayerIds).forEach(function (id) {
+                setPaintIfLayerExists(id, 'line-opacity-transition', { duration: transitionDuration });
+                setPaintIfLayerExists(id, 'line-opacity', opacity);
+            });
+        }
+
+        function tuneBasemap() {
+            if (config.mapbox) return;
+            ['landcover', 'park_national_park', 'park_nature_reserve', 'landuse'].forEach(function (id) {
+                setPaintIfLayerExists(id, 'fill-color', '#181818');
+            });
+            setPaintIfLayerExists('background', 'background-color', '#181818');
+            setPaintIfLayerExists('landuse_residential', 'fill-color', 'rgba(40, 40, 40, 0.28)');
+            setPaintIfLayerExists('water', 'fill-color', '#3a4650');
+            setPaintIfLayerExists('waterway', 'line-color', '#516675');
+            setBasemapRoadPalette('#2c2c2c', '#4a4a4a', 0);
+        }
+
+        function setIntroRoadPalette(active) {
+            if (active) {
+                setBasemapRoadOpacity(0, 700);
+            } else {
+                setBasemapRoadOpacity(1, 500);
+                setBasemapRoadPalette('#2c2c2c', '#4a4a4a', 500);
+            }
+        }
+
+        function isIntroVisualChapter(chapter) {
+            return chapter && chapter.id === 'credits';
+        }
+
+        function activateIntroEffects() {
+            document.body.classList.add('intro-active');
+            setIntroRoadPalette(true);
+        }
+
+        function deactivateIntroEffects() {
+            document.body.classList.remove('intro-active');
+            setIntroRoadPalette(false);
+        }
+
+        function syncIntroEffects() {
+            deactivateIntroEffects();
+        }
+
+        var activeMapCalloutChapterId = null;
+        var mapCalloutMoveHandler = null;
+
+        function clearMapCallout() {
+            activeMapCalloutChapterId = null;
+            var container = document.getElementById('map-callouts');
+            if (container) {
+                container.classList.remove('is-visible');
+                container.setAttribute('aria-hidden', 'true');
+            }
+            if (map && mapCalloutMoveHandler) {
+                map.off('move', mapCalloutMoveHandler);
+                map.off('resize', mapCalloutMoveHandler);
+                mapCalloutMoveHandler = null;
+            }
+        }
+
+        function getMapCalloutAnchors(mapCallout) {
+            if (mapCallout.anchors && mapCallout.anchors.length) {
+                return mapCallout.anchors.map(function (item) {
+                    return {
+                        lngLat: item.lngLat,
+                        imageMarker: item.imageMarker || [0.5, 0.5],
+                    };
+                });
+            }
+
+            if (mapCallout.anchor) {
+                return [{
+                    lngLat: mapCallout.anchor,
+                    imageMarker: mapCallout.imageMarker || [0.5, 0.5],
+                }];
+            }
+
+            return [];
+        }
+
+        function getMapCalloutReferencePoint(mapCallout) {
+            var anchors = getMapCalloutAnchors(mapCallout);
+            if (!anchors.length || !map) return null;
+
+            if (mapCallout.anchor) {
+                return map.project(mapCallout.anchor);
+            }
+
+            var sumX = 0;
+            var sumY = 0;
+            anchors.forEach(function (item) {
+                var point = map.project(item.lngLat);
+                sumX += point.x;
+                sumY += point.y;
+            });
+
+            return {
+                x: sumX / anchors.length,
+                y: sumY / anchors.length,
+            };
+        }
+
+        function rebuildMapCalloutSvg(anchors, mapCallout) {
+            var linesGroup = document.getElementById('map-callout-lines');
+            var dotsGroup = document.getElementById('map-callout-dots');
+            if (!linesGroup || !dotsGroup) return;
+
+            var lineStyle = (mapCallout && mapCallout.lineStyle) || 'straight';
+            var lineColor = (mapCallout && mapCallout.lineColor) || '#ff7876';
+            var lineWidth = (mapCallout && mapCallout.lineWidth) || 2.5;
+
+            linesGroup.innerHTML = '';
+            dotsGroup.innerHTML = '';
+
+            anchors.forEach(function () {
+                var usePath = lineStyle === 'elbow' || lineStyle === 'rounded-elbow';
+                var line = document.createElementNS('http://www.w3.org/2000/svg', usePath ? 'path' : 'line');
+                line.setAttribute('class', 'map-callout-line');
+                line.setAttribute('stroke', lineColor);
+                line.setAttribute('stroke-width', lineWidth);
+                linesGroup.appendChild(line);
+
+                var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('class', 'map-callout-anchor-dot');
+                dot.setAttribute('fill', lineColor);
+                dot.setAttribute('r', Math.max(3, lineWidth + 0.5));
+                dotsGroup.appendChild(dot);
+            });
+        }
+
+        function getPanelEdgePoint(panelLeft, panelTop, panelWidth, panelHeight, targetX, targetY) {
+            var centerX = panelLeft + panelWidth / 2;
+            var centerY = panelTop + panelHeight / 2;
+            var dx = targetX - centerX;
+            var dy = targetY - centerY;
+
+            if (!dx && !dy) {
+                return { x: centerX, y: centerY };
+            }
+
+            var scaleX = dx !== 0 ? (panelWidth / 2) / Math.abs(dx) : Infinity;
+            var scaleY = dy !== 0 ? (panelHeight / 2) / Math.abs(dy) : Infinity;
+            var scale = Math.min(scaleX, scaleY);
+
+            return {
+                x: centerX + dx * scale,
+                y: centerY + dy * scale,
+            };
+        }
+
+        function getHorizontalPanelLineStart(panelLeft, panelTop, panelWidth, panelHeight, anchorPoint) {
+            var y = Math.min(Math.max(anchorPoint.y, panelTop), panelTop + panelHeight);
+            var x = anchorPoint.x >= panelLeft + panelWidth / 2
+                ? panelLeft
+                : panelLeft + panelWidth;
+            return { x: x, y: y };
+        }
+
+        function positionMapCalloutPanel(mapCallout, referencePoint, anchorPoint, panelWidth, panelHeight) {
+            var offset = mapCallout.offset || [132, -168];
+            var rightInset = mapCallout.rightInset != null ? mapCallout.rightInset : 24;
+            var minLeft = 16;
+            var maxLeft = Math.max(minLeft, window.innerWidth - panelWidth - rightInset);
+            var minTop = 16;
+            var maxTop = Math.max(minTop, window.innerHeight - panelHeight - 16);
+            var panelLeft;
+            var panelTop;
+
+            if (mapCallout.panelPlacement === 'toward-right') {
+                var anchorBasedLeft = referencePoint.x + offset[0];
+                anchorBasedLeft = Math.min(Math.max(minLeft, anchorBasedLeft), maxLeft);
+                var targetLeft = maxLeft;
+                panelLeft = anchorBasedLeft + (targetLeft - anchorBasedLeft) * 0.5;
+            } else if (mapCallout.panelPlacement === 'right') {
+                panelLeft = maxLeft;
+            } else {
+                panelLeft = referencePoint.x + offset[0];
+                panelLeft = Math.min(Math.max(minLeft, panelLeft), maxLeft);
+            }
+
+            if (mapCallout.lineConnector === 'horizontal' && anchorPoint) {
+                panelTop = anchorPoint.y - panelHeight / 2;
+                if (mapCallout.panelVerticalOffset != null) {
+                    panelTop += mapCallout.panelVerticalOffset;
+                }
+            } else {
+                panelTop = referencePoint.y + offset[1];
+            }
+
+            panelTop = Math.min(Math.max(minTop, panelTop), maxTop);
+
+            return { left: panelLeft, top: panelTop };
+        }
+
+        function setMapCalloutConnector(lineEl, x1, y1, x2, y2, lineStyle, index) {
+            if (lineStyle === 'elbow' || lineStyle === 'rounded-elbow') {
+                var radius = lineStyle === 'rounded-elbow' ? 16 : 0;
+                var stagger = index * 34;
+                var elbowY = y2 >= y1 ? y1 + 48 + stagger : y1 - 48 - stagger;
+                var dirX = x2 >= x1 ? 1 : -1;
+                var dirY = y2 >= elbowY ? 1 : -1;
+
+                if (radius > 0) {
+                    var d = [
+                        'M', x1, y1,
+                        'L', x1, elbowY - dirY * radius,
+                        'Q', x1, elbowY, x1 + dirX * radius, elbowY,
+                        'L', x2 - dirX * radius, elbowY,
+                        'Q', x2, elbowY, x2, elbowY + dirY * radius,
+                        'L', x2, y2,
+                    ].join(' ');
+                    lineEl.setAttribute('d', d);
+                } else {
+                    lineEl.setAttribute('d', [
+                        'M', x1, y1,
+                        'L', x1, elbowY,
+                        'L', x2, elbowY,
+                        'L', x2, y2,
+                    ].join(' '));
+                }
+
+                lineEl.removeAttribute('points');
+                lineEl.removeAttribute('x1');
+                return;
+            }
+
+            lineEl.removeAttribute('d');
+            lineEl.setAttribute('x1', x1);
+            lineEl.setAttribute('y1', y1);
+            lineEl.setAttribute('x2', x2);
+            lineEl.setAttribute('y2', y2);
+        }
+
+        function updateMapCalloutGeometry() {
+            if (!map || !activeMapCalloutChapterId) return;
+
+            var chapter = config.chapters.find(function (chap) {
+                return chap.id === activeMapCalloutChapterId;
+            });
+            if (!chapter || !chapter.mapCallout) return;
+
+            var panel = document.getElementById('map-callout-panel');
+            var image = document.getElementById('map-callout-image');
+            var callouts = document.getElementById('map-callouts');
+            var linesGroup = document.getElementById('map-callout-lines');
+            var dotsGroup = document.getElementById('map-callout-dots');
+            if (!panel || !callouts || !linesGroup || !dotsGroup) return;
+
+            var mapCallout = chapter.mapCallout;
+            var anchors = getMapCalloutAnchors(mapCallout);
+            var referencePoint = getMapCalloutReferencePoint(mapCallout);
+            if (!referencePoint || !anchors.length) return;
+
+            var lineStyle = mapCallout.lineStyle || 'straight';
+            var lineColor = mapCallout.lineColor || '#ff7876';
+            var lineWidth = mapCallout.lineWidth || 2.5;
+            var lineOrigin = mapCallout.lineOrigin || 'image';
+            var panelWidth = panel.offsetWidth;
+            var panelHeight = panel.offsetHeight;
+            var primaryAnchorPoint = map.project(anchors[0].lngLat);
+            var panelPosition = positionMapCalloutPanel(
+                mapCallout,
+                referencePoint,
+                primaryAnchorPoint,
+                panelWidth,
+                panelHeight
+            );
+
+            panel.style.left = panelPosition.left + 'px';
+            panel.style.top = panelPosition.top + 'px';
+
+            var panelLeft = panelPosition.left;
+            var panelTop = panelPosition.top;
+            var calloutsRect = callouts.getBoundingClientRect();
+            var lines = linesGroup.querySelectorAll('.map-callout-line');
+            var dots = dotsGroup.querySelectorAll('.map-callout-anchor-dot');
+
+            anchors.forEach(function (item, index) {
+                var anchorPoint = map.project(item.lngLat);
+                var lineStartX = panelLeft + (panelWidth * 0.5);
+                var lineStartY = panelTop + (panelHeight * 0.5);
+
+                if (mapCallout.lineConnector === 'horizontal') {
+                    var horizontalStart = getHorizontalPanelLineStart(
+                        panelLeft,
+                        panelTop,
+                        panelWidth,
+                        panelHeight,
+                        anchorPoint
+                    );
+                    lineStartX = horizontalStart.x;
+                    lineStartY = horizontalStart.y;
+                } else if (lineOrigin === 'panel-edge') {
+                    var edgePoint = getPanelEdgePoint(panelLeft, panelTop, panelWidth, panelHeight, anchorPoint.x, anchorPoint.y);
+                    lineStartX = edgePoint.x;
+                    lineStartY = edgePoint.y;
+                } else if (image && image.offsetWidth > 0 && image.offsetHeight > 0) {
+                    var imageRect = image.getBoundingClientRect();
+                    lineStartX = imageRect.left - calloutsRect.left + (imageRect.width * item.imageMarker[0]);
+                    lineStartY = imageRect.top - calloutsRect.top + (imageRect.height * item.imageMarker[1]);
+                }
+
+                if (lines[index]) {
+                    lines[index].setAttribute('stroke', lineColor);
+                    lines[index].setAttribute('stroke-width', lineWidth);
+                    setMapCalloutConnector(lines[index], lineStartX, lineStartY, anchorPoint.x, anchorPoint.y, lineStyle, index);
+                }
+
+                if (dots[index]) {
+                    dots[index].setAttribute('fill', lineColor);
+                    dots[index].setAttribute('r', Math.max(3, lineWidth + 0.5));
+                    dots[index].setAttribute('cx', anchorPoint.x);
+                    dots[index].setAttribute('cy', anchorPoint.y);
+                }
+            });
+        }
+
+        function showMapCallout(chapter) {
+            if (!chapter || !chapter.mapCallout) {
+                clearMapCallout();
+                return;
+            }
+
+            var container = document.getElementById('map-callouts');
+            var text = document.getElementById('map-callout-text');
+            var image = document.getElementById('map-callout-image');
+            var caption = document.getElementById('map-callout-caption');
+            if (!container || !text || !image || !caption) return;
+
+            var mapCallout = chapter.mapCallout;
+            var anchors = getMapCalloutAnchors(mapCallout);
+            rebuildMapCalloutSvg(anchors, mapCallout);
+
+            activeMapCalloutChapterId = chapter.id;
+            text.innerHTML = mapCallout.text || '';
+            text.style.display = mapCallout.text ? 'block' : 'none';
+            image.src = mapCallout.image || '';
+            image.alt = mapCallout.imageAlt || '';
+            if (mapCallout.captionHtml) {
+                caption.innerHTML = mapCallout.captionHtml;
+            } else {
+                caption.textContent = mapCallout.caption || '';
+            }
+            image.style.display = mapCallout.image ? 'block' : 'none';
+            image.style.marginTop = mapCallout.text ? '10px' : '0';
+            caption.style.display = (mapCallout.captionHtml || mapCallout.caption) ? 'block' : 'none';
+            image.onload = function () {
+                updateMapCalloutGeometry();
+            };
+
+            container.classList.remove('is-visible');
+            container.setAttribute('aria-hidden', 'true');
+
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    container.classList.add('is-visible');
+                    container.setAttribute('aria-hidden', 'false');
+                    updateMapCalloutGeometry();
+                });
+            });
+
+            if (!mapCalloutMoveHandler) {
+                mapCalloutMoveHandler = function () {
+                    updateMapCalloutGeometry();
+                };
+                map.on('move', mapCalloutMoveHandler);
+                map.on('resize', mapCalloutMoveHandler);
+            }
+        }
+
+        function revealMap() {
+            if (document.body.classList.contains('map-active')) return;
+            document.body.classList.add('map-active');
+            var splash = document.getElementById('start-splash');
+            if (splash) splash.setAttribute('aria-hidden', 'true');
+        }
+
+        function enterIntroView() {
+            if (!document.body.classList.contains('start-active')) return;
+            document.body.classList.remove('start-active');
+            document.body.classList.add('intro-chapter-active');
+            var cue = document.getElementById('scroll-cue');
+            if (cue) cue.setAttribute('aria-hidden', 'true');
+            revealMap();
+            var intro = config.chapters[0];
+            if (map && intro) {
+                intro.padding = getChapterPadding(intro);
+                StoryLayers.enterChapter(intro);
+                moveToChapter(intro, false);
+            }
+        }
+
+        function handleStartSplashScroll() {
+            if (document.body.classList.contains('start-active') && window.scrollY > 12) {
+                enterIntroView();
+            }
+        }
+
+        window.addEventListener('scroll', handleStartSplashScroll, { passive: true });
+        window.addEventListener('scroll', function () {
+            if (pendingStreetHighlightChapterId) {
+                var chapter = config.chapters.find(function (chap) {
+                    return chap.id === pendingStreetHighlightChapterId;
+                });
+                if (chapter) scheduleStreetHighlightStart(chapter);
+            }
+        }, { passive: true });
+
+        function getChapterPadding(chapter) {
+            var isMobile = window.innerWidth <= 900;
+            if (isMobile) {
+                return { top: 110, right: 16, bottom: 32, left: 16 };
+            }
+
+            if (chapter && chapter.id === 'intro') {
+                return { top: 40, right: 40, bottom: 40, left: 40 };
+            }
+
+            if (chapter && chapter.id === 'hirsch-odf') {
+                var hirschPanelWidth = Math.min(490, window.innerWidth - 56);
+                var hirschSidePadding = Math.round(hirschPanelWidth + Math.min(window.innerWidth * 0.08, 96));
+                return { top: 110, right: 140, bottom: 40, left: hirschSidePadding };
+            }
+
+            if (isIntroVisualChapter(chapter)) {
+                return { top: 0, right: 0, bottom: 0, left: 0 };
+            }
+
+            var panelWidth = Math.min(490, window.innerWidth - 56);
+            var sidePadding = Math.round(panelWidth + Math.min(window.innerWidth * 0.08, 96));
+            var basePadding = { top: 110, right: 8, bottom: 40, left: 8 };
+
+            if (chapter.alignment === 'right') {
+                basePadding.right = sidePadding;
+            } else {
+                basePadding.left = sidePadding;
+            }
+
+            return basePadding;
+        }
+
+        function getChapterCameraOptions(chapter) {
+            if (isIntroVisualChapter(chapter)) {
+                return Object.assign({}, chapter.location);
+            }
+
+            return Object.assign({}, chapter.location, {
+                padding: getChapterPadding(chapter)
+            });
+        }
+
+        function getMapEasing() {
+            return StoryLayers && StoryLayers.easeInOutCubic
+                ? StoryLayers.easeInOutCubic
+                : function (t) {
+                    return t;
+                };
+        }
+
+        function getMapFlyDuration() {
+            return StoryLayers && StoryLayers.getFlyDuration
+                ? StoryLayers.getFlyDuration()
+                : (config.mapFlyDuration || 2800);
+        }
+
+        function moveToChapter(chapter, immediate) {
+            var bounds = getChapterStreetBounds(chapter);
+            var flyDuration = immediate ? 0 : getMapFlyDuration();
+            var easing = getMapEasing();
+
+            if (bounds) {
+                map.fitBounds(bounds, {
+                    padding: getChapterPadding(chapter),
+                    bearing: chapter.location.bearing,
+                    pitch: chapter.location.pitch,
+                    duration: flyDuration,
+                    easing: easing,
+                    maxZoom: chapter.location.zoom
+                });
+                return;
+            }
+
+            var camera = getChapterCameraOptions(chapter);
+            if (immediate) {
+                map.jumpTo(camera);
+            } else {
+                map.flyTo(Object.assign({}, camera, {
+                    duration: flyDuration,
+                    easing: easing
+                }));
+            }
+        }
+
+        function updateMapAnchorUi(message) {
+            var chapterLabel = document.getElementById('map-anchor-chapter');
+            var output = document.getElementById('map-anchor-output');
+            var toggleButton = document.getElementById('toggle-map-edit');
+            var tools = document.getElementById('map-anchor-tools');
+
+            if (chapterLabel) {
+                chapterLabel.textContent = config.chapters[currentChapterIndex].id;
+            }
+            if (toggleButton) {
+                toggleButton.textContent = isMapEditMode ? 'Lock map' : 'Edit map';
+                toggleButton.classList.toggle('is-active', isMapEditMode);
+            }
+            if (tools) {
+                tools.classList.toggle('is-editing', isMapEditMode);
+            }
+            if (output && message) {
+                output.textContent = message;
+            }
+        }
+
+        function setMapInteractionsEnabled(enabled) {
+            if (!map) return;
+            if (!enabled) {
+                if (map.dragPan) map.dragPan.disable();
+                if (map.scrollZoom) map.scrollZoom.disable();
+                if (map.boxZoom) map.boxZoom.disable();
+                if (map.doubleClickZoom) map.doubleClickZoom.disable();
+                if (map.touchZoomRotate) map.touchZoomRotate.disable();
+                if (map.touchPitch) map.touchPitch.disable();
+                if (map.keyboard) map.keyboard.disable();
+                if (map.getCanvas()) {
+                    map.getCanvas().style.cursor = 'default';
+                    map.getCanvas().style.pointerEvents = 'none';
+                }
+                return;
+            }
+
+            if (map.getCanvas()) {
+                map.getCanvas().style.cursor = 'grab';
+                map.getCanvas().style.pointerEvents = 'auto';
+            }
+            if (map.dragPan) map.dragPan.enable();
+            if (map.boxZoom) map.boxZoom.disable();
+            if (map.doubleClickZoom) map.doubleClickZoom.disable();
+            if (map.keyboard) map.keyboard.disable();
+
+            if (isMapEditMode) {
+                if (map.scrollZoom) map.scrollZoom.enable();
+                if (map.touchZoomRotate) map.touchZoomRotate.enable();
+                if (map.touchPitch) map.touchPitch.enable();
+            } else {
+                /* Wheel zoom off — conflicts with scrollytelling. Use +/- or two-finger pinch. */
+                if (map.scrollZoom) map.scrollZoom.disable();
+                if (map.touchZoomRotate) map.touchZoomRotate.enable();
+                if (map.touchPitch) map.touchPitch.disable();
+            }
+        }
+
+        function setMapEditingMode(enabled) {
+            isMapEditMode = enabled;
+            document.body.classList.toggle('map-editing', enabled);
+            setMapInteractionsEnabled(true);
+            if (map.dragRotate) enabled ? map.dragRotate.enable() : map.dragRotate.disable();
+            updateMapAnchorUi(enabled
+                ? 'Drag to pan. Wheel to zoom. Right-drag or Ctrl-drag to rotate/pitch. Click Anchor to save the current slide view.'
+                : 'Karte: zoomen mit +/− oder zwei Fingern, verschieben mit ziehen.');
+        }
+
+        function formatChapterLocation(chapter) {
+            return [
+                chapter.id + ': {',
+                '  fitToStreetBounds: false,',
+                '  location: {',
+                '    center: [' + chapter.location.center[0] + ', ' + chapter.location.center[1] + '],',
+                '    zoom: ' + chapter.location.zoom + ',',
+                '    pitch: ' + chapter.location.pitch + ',',
+                '    bearing: ' + chapter.location.bearing,
+                '  }',
+                '}'
+            ].join('\n');
+        }
+
+        function saveCurrentMapAnchor() {
+            var chapter = config.chapters[currentChapterIndex];
+            var center = map.getCenter();
+            chapter.location = {
+                center: [roundNumber(center.lng, 6), roundNumber(center.lat, 6)],
+                zoom: roundNumber(map.getZoom(), 2),
+                pitch: roundNumber(map.getPitch(), 1),
+                bearing: roundNumber(map.getBearing(), 1)
+            };
+            chapter.fitToStreetBounds = false;
+
+            var overrides = getSavedCameraOverrides();
+            overrides[chapter.id] = { location: chapter.location };
+            try {
+                window.localStorage.setItem(CAMERA_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides));
+            } catch (err) {
+                // Ignore storage failures and still show the values for manual copy.
+            }
+
+            var output = formatChapterLocation(chapter);
+            updateMapAnchorUi(output + '\n\nCopied to clipboard.');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(output).catch(function () {
+                    updateMapAnchorUi(output + '\n\nClipboard blocked. Copy manually from here.');
+                });
+            }
+        }
+
+        // Build story DOM
+        function initRotatedChapterFigures(root) {
+            (root || document).querySelectorAll('.chapter-figure--rotate-left img').forEach(function (img) {
+                function applyAspectRatio() {
+                    var wrap = img.closest('.chapter-figure-rotate');
+                    if (!wrap || !img.naturalWidth || !img.naturalHeight) return;
+                    wrap.style.aspectRatio = img.naturalHeight + ' / ' + img.naturalWidth;
+                }
+
+                if (img.complete) applyAspectRatio();
+                else img.addEventListener('load', applyAspectRatio, { once: true });
+            });
+        }
+
+        function initSplitCropFigures(root) {
+            (root || document).querySelectorAll('.chapter-figure--split-crop').forEach(function (figure) {
+                var splits = figure.querySelectorAll('.chapter-figure-split');
+                if (splits.length < 2) return;
+
+                var leftImg = splits[0].querySelector('.chapter-figure-image img');
+                var rightCrop = splits[1].querySelector('.chapter-figure-image--crop');
+                if (!leftImg || !rightCrop) return;
+
+                function syncHeights() {
+                    if (!leftImg.offsetHeight) return;
+                    rightCrop.style.height = leftImg.offsetHeight + 'px';
+                }
+
+                syncHeights();
+                if (!leftImg.complete) {
+                    leftImg.addEventListener('load', syncHeights, { once: true });
+                }
+            });
+        }
+
+        var story = document.getElementById('story');
+        var features = document.createElement('div');
+        features.setAttribute('id', 'features');
+
+        config.chapters.forEach((record, idx) => {
+            var container = document.createElement('div');
+            var chapter = document.createElement('div');
+
+            if (record.title) {
+                var title = document.createElement('h3');
+                title.innerText = record.title;
+                chapter.appendChild(title);
+            }
+
+            if (record.image) {
+                var image = new Image();
+                image.src = record.image;
+                chapter.appendChild(image);
+            }
+
+            if (record.description) {
+                var desc = document.createElement('div');
+                desc.className = 'chapter-body';
+                desc.innerHTML = record.description;
+                chapter.appendChild(desc);
+            }
+
+            container.setAttribute('id', record.id);
+            container.classList.add('step');
+            container.setAttribute('data-scrollama-index', String(idx));
+            if (idx === 0) container.classList.add('active');
+
+            if (chapter.childNodes.length > 0) {
+                chapter.classList.add(config.theme);
+                chapter.classList.add('card');
+                container.appendChild(chapter);
+            }
+            container.classList.add(alignments[record.alignment] || 'centered');
+            if (record.hidden) container.classList.add('hidden');
+            features.appendChild(container);
+        });
+
+        initRotatedChapterFigures(features);
+        initSplitCropFigures(features);
+        story.appendChild(features);
+
+        var footer = document.createElement('div');
+
+        if (config.footer) {
+            var footerText = document.createElement('p');
+            footerText.innerHTML = config.footer;
+            footer.appendChild(footerText);
+        }
+
+        if (footer.innerText.length > 0) {
+            footer.classList.add(config.theme);
+            footer.setAttribute('id', 'footer');
+            story.appendChild(footer);
+        }
+
+        if (config.mapbox && getMapboxAccessToken()) {
+            document.body.classList.add('mapbox-basemap');
+        } else if (config.mapbox) {
+            console.error(
+                'Mapbox token missing. Ensure config.local.js exists and sets window.MAPBOX_ACCESS_TOKEN.'
+            );
+        }
+
+        var mapOptions = {
+            container: 'map',
+            style: getResolvedMapStyle(),
+            center: config.chapters[0].location.center,
+            zoom: config.chapters[0].location.zoom,
+            bearing: config.chapters[0].location.bearing,
+            pitch: config.chapters[0].location.pitch,
+            attributionControl: false,
+            interactive: true,
+            scrollZoom: false,
+            boxZoom: false,
+            doubleClickZoom: false,
+            touchZoomRotate: true,
+            touchPitch: false,
+            dragPan: true
+        };
+
+        var map = new maplibregl.Map(mapOptions);
+
+        map.addControl(new maplibregl.AttributionControl({ compact: true }));
+
+        function bindMapZoomControls() {
+            var zoomInBtn = document.getElementById('map-zoom-in');
+            var zoomOutBtn = document.getElementById('map-zoom-out');
+            if (!zoomInBtn || !zoomOutBtn) return;
+
+            zoomInBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                map.zoomIn({ duration: 280 });
+            });
+            zoomOutBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                map.zoomOut({ duration: 280 });
+            });
+        }
+
+        bindMapZoomControls();
+
+        map.on('error', function (event) {
+            var message =
+                (event && event.error && event.error.message) ||
+                (event && event.message) ||
+                'Unknown map error';
+            console.error('Map error:', message, event);
+        });
+
+        if (config.showMarkers) {
+            var marker = new maplibregl.Marker({ color: config.markerColor });
+            marker.setLngLat(config.chapters[0].location.center).addTo(map);
+        }
+
+        var toggleMapEditButton = document.getElementById('toggle-map-edit');
+        var saveMapAnchorButton = document.getElementById('save-map-anchor');
+        if (toggleMapEditButton) {
+            toggleMapEditButton.addEventListener('click', function () {
+                setMapEditingMode(!isMapEditMode);
+            });
+        }
+        if (saveMapAnchorButton) {
+            saveMapAnchorButton.addEventListener('click', function () {
+                saveCurrentMapAnchor();
+            });
+        }
+        updateMapAnchorUi('Edit mode off.');
+
+        var scroller = scrollama();
+
+        map.on('load', function () {
+            map.resize();
+            setMapInteractionsEnabled(true);
+            if (map.dragRotate) map.dragRotate.disable();
+            setMapEditingMode(false);
+            tuneBasemap();
+            StoryLayers.init(map);
+            syncIntroEffects();
+
+            scroller
+                .setup({
+                    step: '.step',
+                    offset: 0.5,
+                    progress: true
+                })
+                .onStepEnter(response => {
+                    currentChapterIndex = config.chapters.findIndex(function (chap) {
+                        return chap.id === response.element.id;
+                    });
+                    if (currentChapterIndex < 0) return;
+                    var chapter = config.chapters[currentChapterIndex];
+
+                    response.element.classList.add('active');
+                    if (currentChapterIndex === 0) {
+                        if (response.direction === 'down') {
+                            enterIntroView();
+                        } else if (document.body.classList.contains('map-active')) {
+                            document.body.classList.add('intro-chapter-active');
+                            chapter.padding = getChapterPadding(chapter);
+                            StoryLayers.enterChapter(chapter);
+                        }
+                    }
+                    if (currentChapterIndex >= 1) {
+                        document.body.classList.remove('intro-chapter-active');
+                        revealMap();
+                    }
+                    var isInitialIntroEntry = !hasInitializedFirstChapter && currentChapterIndex === 0;
+                    var usesStoryLayers =
+                        chapter.storyLayers ||
+                        chapter.layerSequence ||
+                        chapter.mapClusterHover;
+
+                    if (usesStoryLayers) {
+                        chapter.padding = getChapterPadding(chapter);
+                        StoryLayers.enterChapter(chapter);
+                    }
+
+                    var storyHandlesCamera =
+                        chapter.keepCamera ||
+                        (usesStoryLayers &&
+                            (chapter.layerSequence ||
+                                (chapter.fitStoryBounds !== false && chapter.storyLayers)));
+                    if (!storyHandlesCamera && currentChapterIndex !== 0) {
+                        moveToChapter(chapter, isInitialIntroEntry);
+                    } else if (currentChapterIndex === 0 && document.body.classList.contains('map-active') && response.direction !== 'down') {
+                        moveToChapter(chapter, false);
+                    }
+
+                    hasInitializedFirstChapter = true;
+                    updateMapAnchorUi();
+
+                    if (config.showMarkers) marker.setLngLat(chapter.location.center);
+                    if (!usesStoryLayers && chapter.onChapterEnter.length > 0) {
+                        if (chapterNeedsSatellite(chapter)) ensureSatelliteReady();
+                        if (chapterNeedsStreetData(chapter)) ensureStreetDataReady();
+                        applyChapterLayerState(getNonStreetHighlightItems(chapter.onChapterEnter), true);
+                        scheduleStreetHighlightStart(chapter);
+                    }
+                    syncIntroEffects();
+                    if (chapter.mapCallout) {
+                        showMapCallout(chapter);
+                    } else {
+                        clearMapCallout();
+                    }
+                    if (chapter.callback) window[chapter.callback]();
+                    if (chapter.rotateAnimation) {
+                        map.once('moveend', () => {
+                            const rotateNumber = map.getBearing();
+                            map.rotateTo(rotateNumber + 180, {
+                                duration: 30000,
+                                easing: t => t
+                            });
+                        });
+                    }
+                    if (config.auto) {
+                        var next_chapter = (currentChapterIndex + 1) % config.chapters.length;
+                        map.once('moveend', () => {
+                            document.querySelectorAll('[data-scrollama-index="' + next_chapter + '"]')[0].scrollIntoView();
+                        });
+                    }
+
+                })
+                .onStepProgress(response => {
+                    var chapter = config.chapters.find(chap => chap.id === response.element.id);
+                    if (!chapter || !chapter.onChapterEnter.length) return;
+                    updateStreetHighlightFadeForChapter(chapter, response.progress);
+                })
+                .onStepExit(response => {
+                    var chapter = config.chapters.find(function (chap) {
+                        return chap.id === response.element.id;
+                    });
+                    response.element.classList.remove('active');
+                    if (!chapter) return;
+                    if (chapter.id === 'intro') {
+                        document.body.classList.remove('intro-chapter-active');
+                    }
+                    if (pendingStreetHighlightChapterId === chapter.id) {
+                        clearPendingStreetHighlight();
+                        pendingStreetHighlightChapterId = null;
+                    }
+                    if (activeStreetHighlightChapterId === chapter.id) {
+                        activeStreetHighlightChapterId = null;
+                    }
+                    if (chapter.storyLayers || chapter.layerSequence || chapter.mapClusterHover) {
+                        StoryLayers.exitChapter(chapter);
+                    } else if (chapter.onChapterExit.length > 0) {
+                        applyChapterLayerState(chapter.onChapterExit, false);
+                    }
+                    if (chapter.mapCallout) {
+                        clearMapCallout();
+                    }
+                    syncIntroEffects();
+                });
+
+            if (config.auto) {
+                document.querySelectorAll('[data-scrollama-index="0"]')[0].scrollIntoView();
+            }
+
+            moveToChapter(config.chapters[0], true);
+        });
+
+        window.addEventListener('resize', function () {
+            if (map) map.resize();
+            updateMapCalloutGeometry();
+        });
+    </script>
+
+</body>
+
+</html>

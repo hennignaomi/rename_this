@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Edith-Kiss-Str",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
+"features": [
+{ "type": "Feature", "properties": { "gisid": "1084310", "strnr": "10843", "strname": "Edith-Kiss-Straße", "strabnr": "10", "strabtypname": "Strasse", "bez": "02", "bezname": "Friedrichshain-Kreuzberg", "ort": "0201", "ortname": "Friedrichshain" }, "geometry": { "type": "LineString", "coordinates": [ [ 1496025.54976964998059, 6892045.744096860289574 ], [ 1496142.556588470004499, 6892255.104368450120091 ] ] } }
+]
+}

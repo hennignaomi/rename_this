@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "UrsulaGoetze_wgs84",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "gisid": "4348810", "strnr": "43488", "strname": "Ursula-Goetze-Straße", "strabnr": "10", "strabtypname": "Strasse", "bez": "11", "bezname": "Lichtenberg", "ort": "1102", "ortname": "Karlshorst" }, "geometry": { "type": "LineString", "coordinates": [ [ 13.531817312885073, 52.495901639843197 ], [ 13.531345865417107, 52.492626539280884 ] ] } }
+]
+}

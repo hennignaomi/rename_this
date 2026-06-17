@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "renamedPeters_AGG_wgs84",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "gisid": "1120010", "strnr": "11200", "strname": "Maji-Maji-Allee", "strabnr": "10", "strabtypname": "Strasse", "bez": "01", "bezname": "Mitte", "ort": "0105", "ortname": "Wedding" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 13.332280429708707, 52.555326974602458 ], [ 13.333921629330067, 52.556404029231821 ] ] ] } },
+{ "type": "Feature", "properties": { "gisid": "1120110,1120120,1120130", "strnr": "11201", "strname": "Anna-Mungunda-Allee", "strabnr": "10,20,30", "strabtypname": "Strasse", "bez": "01", "bezname": "Mitte", "ort": "0105", "ortname": "Wedding" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 13.335323545447434, 52.557333993635865 ], [ 13.334568837895043, 52.556857647845192 ] ], [ [ 13.336035445425644, 52.55782011384381 ], [ 13.335323545447434, 52.557333993635865 ] ], [ [ 13.33741412617244, 52.558709555746482 ], [ 13.336035445425644, 52.55782011384381 ] ] ] } }
+]
+}
