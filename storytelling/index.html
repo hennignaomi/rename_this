@@ -86,25 +86,122 @@
         }
 
         .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
-            margin: 0 10px 10px 0;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: rgba(10, 12, 14, 0.78);
-            backdrop-filter: blur(10px);
+            margin: 0 16px 10px 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            backdrop-filter: none;
+            box-shadow: none;
+            font: 400 10px/1.35 "Barlow Condensed", system-ui, sans-serif;
+            letter-spacing: 0.01em;
+            color: rgba(244, 244, 241, 0.46);
+            max-width: min(280px, 46vw);
+            text-align: right;
         }
 
-        .maplibregl-ctrl-attrib.maplibregl-compact {
-            color: var(--text);
-            padding-right: 0;
+        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a {
+            color: rgba(244, 244, 241, 0.52);
+        }
+
+        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover {
+            color: rgba(244, 244, 241, 0.72);
+        }
+
+        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib,
+        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+            color: rgba(38, 38, 36, 0.52);
+        }
+
+        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a,
+        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a {
+            color: rgba(38, 38, 36, 0.58);
+        }
+
+        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover,
+        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover {
+            color: rgba(20, 20, 18, 0.78);
         }
 
         .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
-            display: block;
-            background-color: transparent;
-            filter: invert(1) brightness(1.25);
+            display: none;
         }
 
+        .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner,
         .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
-            display: none !important;
+            display: block !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        #legal-controls {
+            position: fixed;
+            right: 16px;
+            bottom: 44px;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        #legal-controls-toggle {
+            width: 48px;
+            height: 48px;
+            margin: 0;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.38);
+            border-radius: 999px;
+            background: rgba(10, 12, 14, 0.92);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font: 700 22px/1 "Barlow Condensed", system-ui, sans-serif;
+            cursor: pointer;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+            transition: background 180ms ease, border-color 180ms ease, transform 120ms ease;
+        }
+
+        #legal-controls-toggle:hover,
+        #legal-controls-toggle[aria-expanded="true"] {
+            background: rgba(28, 30, 34, 0.96);
+            border-color: rgba(255, 255, 255, 0.58);
+        }
+
+        #legal-controls-toggle:active {
+            transform: scale(0.96);
+        }
+
+        #legal-controls-panel {
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 168px;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 8px;
+            background: rgba(10, 12, 14, 0.94);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+        }
+
+        #legal-controls-panel.is-open {
+            display: flex;
+        }
+
+        #legal-controls-panel a {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 4px;
+            color: var(--text);
+            font: 600 15px/1.2 "Barlow Condensed", system-ui, sans-serif;
+            letter-spacing: 0.02em;
+            text-decoration: none;
+            transition: background 160ms ease, color 160ms ease;
+        }
+
+        #legal-controls-panel a:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
         }
 
         .map-overlay {
@@ -125,17 +222,24 @@
             background: #f2f0eb;
         }
 
-        body.mapbox-basemap #map-shell {
+        body.mapbox-basemap #map-shell,
+        body.basemap-de-basemap #map-shell {
             background: #e8e4df;
         }
 
-        body.mapbox-basemap .map-overlay {
+        body.basemap-de-basemap #map-shell {
+            background: #f2f2f2;
+        }
+
+        body.mapbox-basemap .map-overlay,
+        body.basemap-de-basemap .map-overlay {
             background:
                 linear-gradient(90deg, rgba(8, 9, 11, 0.42) 0%, rgba(8, 9, 11, 0.18) 32%, rgba(8, 9, 11, 0) 58%),
                 linear-gradient(0deg, rgba(8, 9, 11, 0.45) 0%, rgba(8, 9, 11, 0) 38%);
         }
 
-        body.intro-chapter-active.mapbox-basemap .map-overlay {
+        body.intro-chapter-active.mapbox-basemap .map-overlay,
+        body.intro-chapter-active.basemap-de-basemap .map-overlay {
             background:
                 linear-gradient(90deg, rgba(8, 9, 11, 0.59) 0%, rgba(8, 9, 11, 0.25) 32%, rgba(8, 9, 11, 0) 58%),
                 linear-gradient(0deg, rgba(8, 9, 11, 0.63) 0%, rgba(8, 9, 11, 0) 38%);
@@ -393,19 +497,35 @@
         }
 
         .card .chapter-body .legal-links {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 6px;
             margin-top: 1rem;
-            font-size: 11px;
-            line-height: 1.35;
-            color: rgba(244, 244, 241, 0.42);
         }
 
         .card .chapter-body .legal-links a {
-            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 2.15rem;
+            padding: 0.4rem 0.55rem;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            font: 600 12px/1.2 "Barlow Condensed", system-ui, sans-serif;
+            letter-spacing: 0.02em;
+            color: rgba(244, 244, 241, 0.88);
             text-decoration: none;
+            text-align: center;
+            transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
         }
 
         .card .chapter-body .legal-links a:hover {
-            color: rgba(244, 244, 241, 0.68);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.38);
+            color: #fff;
         }
 
         .card .chapter-body {
@@ -895,6 +1015,13 @@
             <button type="button" id="map-zoom-in" title="Hineinzoomen" aria-label="Hineinzoomen">+</button>
             <button type="button" id="map-zoom-out" title="Herauszoomen" aria-label="Herauszoomen">−</button>
         </nav>
+        <nav id="legal-controls" aria-label="Rechtliches">
+            <div id="legal-controls-panel">
+                <a href="./impressum.html">Impressum</a>
+                <a href="./datenschutz.html">Datenschutz</a>
+            </div>
+            <button type="button" id="legal-controls-toggle" aria-expanded="false" aria-controls="legal-controls-panel" title="Impressum und Datenschutz" aria-label="Impressum und Datenschutz">i</button>
+        </nav>
     </div>
     <div id="map-shell">
         <div id="map"></div>
@@ -914,8 +1041,8 @@
     <div id="story"></div>
 
     <script src="./config.local.js" onerror="console.error('Missing config.local.js — copy config.local.example.js and add your Mapbox token.')"></script>
-    <script src="./config.js?v=20260624e"></script>
-    <script src="./story-layers.js?v=20260602e"></script>
+    <script src="./config.js?v=20260602g"></script>
+    <script src="./story-layers.js?v=20260624f"></script>
     <script>
         var layerTypes = {
             'fill': ['fill-opacity'],
@@ -1898,7 +2025,7 @@
         }
 
         function tuneBasemap() {
-            if (config.mapbox) return;
+            if (config.mapbox || config.basemapProvider === 'basemapde') return;
             ['landcover', 'park_national_park', 'park_nature_reserve', 'landuse'].forEach(function (id) {
                 setPaintIfLayerExists(id, 'fill-color', '#181818');
             });
@@ -1907,6 +2034,120 @@
             setPaintIfLayerExists('water', 'fill-color', '#3a4650');
             setPaintIfLayerExists('waterway', 'line-color', '#516675');
             setBasemapRoadPalette('#2c2c2c', '#4a4a4a', 0);
+        }
+
+        function isBasemapdeMinorPathLayer(layerId) {
+            return (
+                layerId.indexOf('Fussweg') !== -1 ||
+                layerId.indexOf('Fussgaengerzone') !== -1 ||
+                layerId.indexOf('Wirtschaftsweg') !== -1 ||
+                layerId.indexOf('Hauptwirtschaftsweg') !== -1
+            );
+        }
+
+        function isBasemapdeRailTrackLayer(layerId) {
+            return layerId.indexOf('Bahnstrecke') !== -1 && layerId.indexOf('Name_') !== 0;
+        }
+
+        function isBasemapdeTrafficDetailLayer(layerId) {
+            if (layerId.indexOf('Nummer_') === 0) return true;
+            if (isBasemapdeRailTrackLayer(layerId)) return true;
+            if (layerId === 'Name_Strassenbahn_Haltepunkt_Haltestelle') return true;
+            if (layerId === 'Name_Verkehrspunkt_Autobahnknoten') return true;
+            if (layerId.indexOf('Mittellinie_') !== -1) return true;
+            if (isBasemapdeMinorPathLayer(layerId)) return true;
+            return false;
+        }
+
+        function isBasemapdeInfrastructureLayer(layerId) {
+            if (layerId.indexOf('VegetationsL_Baumreihe') === 0) return true;
+            if (layerId === 'Freileitung' || layerId.indexOf('VersorgungsL_') === 0) return true;
+            if (
+                layerId.indexOf('ImBau_') === 0 ||
+                layerId.indexOf('AusserBetrieb_') === 0 ||
+                layerId === 'Name_ImBau' ||
+                layerId === 'Name_AusserBetrieb'
+            ) {
+                return true;
+            }
+            return false;
+        }
+
+        function basemapdeLayerHasDasharray(layerId) {
+            if (!map.getLayer(layerId)) return false;
+            try {
+                var dash = map.getPaintProperty(layerId, 'line-dasharray');
+                return dash != null && !(Array.isArray(dash) && dash.length === 0);
+            } catch (err) {
+                return false;
+            }
+        }
+
+        function isBasemapdeWaterLineLayer(layerId, layer) {
+            if (layerId.indexOf('Gewaesser_L_') === 0) return true;
+            if (layerId.indexOf('HistorischL_Wasserleitung') === 0) return true;
+            if (!layer || layer.type !== 'line' || layerId.indexOf('Bauwerk') !== 0) return false;
+            return (
+                layerId.indexOf('Ufer') !== -1 ||
+                layerId.indexOf('Hafendamm') !== -1 ||
+                layerId.indexOf('Mole') !== -1 ||
+                layerId.indexOf('Anleger') !== -1 ||
+                layerId.indexOf('Wellenbrecher') !== -1 ||
+                layerId.indexOf('Buhne') !== -1 ||
+                layerId.indexOf('Wehr') !== -1 ||
+                layerId.indexOf('Schleuse') !== -1 ||
+                layerId.indexOf('Sperrwerk') !== -1
+            );
+        }
+
+        function hasBasemapdeCustomizations() {
+            return (
+                config.basemapdeHideBuildings ||
+                config.basemapdeHideSymbols ||
+                config.basemapdeHideTrafficDetail ||
+                config.basemapdeHideInfrastructure ||
+                config.basemapdeHideDashedLines ||
+                config.basemapdeHideWaterLines
+            );
+        }
+
+        function shouldHideBasemapdeLayer(layerId, layer) {
+            if (config.basemapdeHideBuildings) {
+                if (layerId.indexOf('Gebaeude') !== -1 || layerId === 'Hauskoordinate') {
+                    return true;
+                }
+            }
+            if (config.basemapdeHideSymbols && layerId.indexOf('Symbol_') === 0) {
+                return true;
+            }
+            if (config.basemapdeHideTrafficDetail && isBasemapdeTrafficDetailLayer(layerId)) {
+                return true;
+            }
+            if (config.basemapdeHideInfrastructure && isBasemapdeInfrastructureLayer(layerId)) {
+                return true;
+            }
+            if (config.basemapdeHideWaterLines && isBasemapdeWaterLineLayer(layerId, layer)) {
+                return true;
+            }
+            if (
+                config.basemapdeHideDashedLines &&
+                layer &&
+                layer.type === 'line' &&
+                basemapdeLayerHasDasharray(layerId)
+            ) {
+                return true;
+            }
+            return false;
+        }
+
+        function applyBasemapdeCustomizations() {
+            if (config.basemapProvider !== 'basemapde' || !hasBasemapdeCustomizations()) return;
+            var style = map.getStyle();
+            if (!style || !style.layers) return;
+            style.layers.forEach(function (layer) {
+                if (!shouldHideBasemapdeLayer(layer.id, layer) || !map.getLayer(layer.id)) return;
+                map.setLayoutProperty(layer.id, 'visibility', 'none');
+            });
         }
 
         function setIntroRoadPalette(active) {
@@ -2592,7 +2833,9 @@
             story.appendChild(footer);
         }
 
-        if (config.mapbox && getMapboxAccessToken()) {
+        if (config.basemapProvider === 'basemapde') {
+            document.body.classList.add('basemap-de-basemap');
+        } else if (config.mapbox && getMapboxAccessToken()) {
             document.body.classList.add('mapbox-basemap');
         } else if (config.mapbox) {
             console.error(
@@ -2619,7 +2862,36 @@
 
         var map = new maplibregl.Map(mapOptions);
 
-        map.addControl(new maplibregl.AttributionControl({ compact: true }));
+        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+        function bindLegalControls() {
+            var toggle = document.getElementById('legal-controls-toggle');
+            var panel = document.getElementById('legal-controls-panel');
+            if (!toggle || !panel) return;
+
+            function setOpen(open) {
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                panel.classList.toggle('is-open', open);
+            }
+
+            toggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!panel.classList.contains('is-open')) return;
+                if (event.target === toggle || toggle.contains(event.target) || panel.contains(event.target)) {
+                    return;
+                }
+                setOpen(false);
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') setOpen(false);
+            });
+        }
 
         function bindMapZoomControls() {
             var zoomInBtn = document.getElementById('map-zoom-in');
@@ -2639,6 +2911,7 @@
         }
 
         bindMapZoomControls();
+        bindLegalControls();
 
         map.on('error', function (event) {
             var message =
@@ -2675,6 +2948,7 @@
             if (map.dragRotate) map.dragRotate.disable();
             setMapEditingMode(false);
             tuneBasemap();
+            applyBasemapdeCustomizations();
             StoryLayers.init(map);
             syncIntroEffects();
 

@@ -62,7 +62,27 @@ function buildMapboxRasterStyle(token) {
   };
 }
 
+/** "mapbox" | "basemapde" — set to basemapde to try the BKG basemap.de Web Vektor service. */
+var BASEMAP_PROVIDER = "basemapde";
+
+/** basemap.de viewer styleID → MapLibre style JSON (1=Farbe, 2=Relief, 3=Grau). */
+var BASEMAPDE_STYLE_URLS = {
+  1: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_col.json",
+  2: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_top.json",
+  3: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_gry.json",
+};
+
+function getBasemapdeStyleUrl(styleId) {
+  return BASEMAPDE_STYLE_URLS[styleId || 3] || BASEMAPDE_STYLE_URLS[3];
+}
+
 function getResolvedMapStyle() {
+  if (BASEMAP_PROVIDER === "basemapde") {
+    return getBasemapdeStyleUrl(
+      typeof config !== "undefined" ? config.basemapdeStyleId : 3
+    );
+  }
+
   var token = getMapboxAccessToken();
   if (!token) {
     console.warn(
@@ -96,7 +116,21 @@ var BERLIN = {
 
 var config = {
   style: getMapStyle(),
-  mapbox: true,
+  basemapProvider: BASEMAP_PROVIDER,
+  basemapdeStyleId: 3,
+  /** Hide 2D/3D building footprints on basemap.de (less visual clutter). */
+  basemapdeHideBuildings: true,
+  /** Hide POI icons (parking, trees, towers, transit stops, etc.). */
+  basemapdeHideSymbols: true,
+  /** Hide highway shields, rail tracks, tram labels, motorway junctions, center lines, footpaths. */
+  basemapdeHideTrafficDetail: true,
+  /** Hide tree rows, power lines, and construction/disused road markings. */
+  basemapdeHideInfrastructure: true,
+  /** Hide dashed line features (tunnels, ditches, hedges, historical walls, etc.). */
+  basemapdeHideDashedLines: true,
+  /** Hide water bank/center lines (keep water area fills). */
+  basemapdeHideWaterLines: true,
+  mapbox: BASEMAP_PROVIDER === "mapbox",
   mapFlyDuration: 2800,
   showMarkers: false,
   theme: "dark",
@@ -584,7 +618,7 @@ var config = {
       id: "credits",
       alignment: "center",
       description:
-        '<h3>Postskriptum</h3><p>Die hier gezeigten Karten und Listen von Straßenumbenennungen erheben keinerlei Anspruch auf Vollständigkeit, da trotz zahlreicher Nachfragen keine zentral verwaltete Datengrundlage zu dem Thema verfügbar war. Der Hinweis zu dieser <a href="https://download.statistik-berlin-brandenburg.de/91d0dfabc77bc5d4/5e4ed6e0022b/strassenumbenennungen-berlin.pdf" target="_blank" rel="noopener">Straßenbenennungsdatei</a> erreichte mich erst zum Projektende. Die Liste wurde vom Amt für Statistik Berlin Brandenburg recherchiert und wird halbjährlich aktualisiert. Sie ist jedoch erst ab ca. 1990 vollständig. Zentral geführte Daten zu historischen Straßenbenennungen Ostberlins und früherer Jahrzehnte fehlen nach wie vor.</p><h3>Dank</h3><p>Die Umbenennungen und der aktuelle Wissensstand zur Kolonialgeschichte in Berlins Straßenlandschaft wären ohne die Arbeit von Initiativen wie Berlin Postkolonial e.V., ISD-BUND e.V. und vielen weiteren Aktivist*innen nicht denkbar gewesen.</p><p>Die Arbeit des Vereins Straßenlärm e.V. macht antisemitische, antiziganistische und koloniale Bezüge im Berliner Stadtraum sichtbar.</p><p>Besonderer Dank an Clara Westendorff und Daniel Hadwiger (Museum Reinickendorf), die die Lichtenberger und Reinickendorfer Datensätze zu Straßenumbenennungen erarbeitet und zur Verfügung gestellt haben.</p><p>Ihre Recherchen erfolgten im Kontext der Ausstellungsreihe <a href="https://umbenennen.berlin/" target="_blank" rel="noopener">„umbenennen?!“</a>. Im Verlauf von zwei Jahren zeigen 12 Berliner Bezirksmuseen individuelle Ausstellungen zur Geschichte der Berliner Straßennamen.</p><p><a href="./quellen.html">Quellen</a></p><p class="legal-links"><a href="./impressum.html">Impressum</a> · <a href="./datenschutz.html">Datenschutz</a></p>',
+        '<h3>Postskriptum</h3><p>Die hier gezeigten Karten und Listen von Straßenumbenennungen erheben keinerlei Anspruch auf Vollständigkeit, da trotz zahlreicher Nachfragen keine zentral verwaltete Datengrundlage zu dem Thema verfügbar war. Der Hinweis zu dieser <a href="https://download.statistik-berlin-brandenburg.de/91d0dfabc77bc5d4/5e4ed6e0022b/strassenumbenennungen-berlin.pdf" target="_blank" rel="noopener">Straßenbenennungsdatei</a> erreichte mich erst zum Projektende. Die Liste wurde vom Amt für Statistik Berlin Brandenburg recherchiert und wird halbjährlich aktualisiert. Sie ist jedoch erst ab ca. 1990 vollständig. Zentral geführte Daten zu historischen Straßenbenennungen Ostberlins und früherer Jahrzehnte fehlen nach wie vor.</p><h3>Dank</h3><p>Die Umbenennungen und der aktuelle Wissensstand zur Kolonialgeschichte in Berlins Straßenlandschaft wären ohne die Arbeit von Initiativen wie Berlin Postkolonial e.V., ISD-BUND e.V. und vielen weiteren Aktivist*innen nicht denkbar gewesen.</p><p>Die Arbeit des Vereins Straßenlärm e.V. macht antisemitische, antiziganistische und koloniale Bezüge im Berliner Stadtraum sichtbar.</p><p>Besonderer Dank an Clara Westendorff und Daniel Hadwiger (Museum Reinickendorf), die die Lichtenberger und Reinickendorfer Datensätze zu Straßenumbenennungen erarbeitet und zur Verfügung gestellt haben.</p><p>Ihre Recherchen erfolgten im Kontext der Ausstellungsreihe <a href="https://umbenennen.berlin/" target="_blank" rel="noopener">„umbenennen?!“</a>. Im Verlauf von zwei Jahren zeigen 12 Berliner Bezirksmuseen individuelle Ausstellungen zur Geschichte der Berliner Straßennamen.</p><p class="legal-links"><a href="./quellen.html">Quellen</a><a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a></p>',
       location: BERLIN,
       onChapterEnter: [],
       onChapterExit: [],

@@ -44,12 +44,30 @@ a:hover {
 }
 
 .legal-nav {
-  margin-top: 1.25rem;
-  font-size: 11px;
-  color: #5f5f5a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 1.5rem;
 }
 
-.legal-nav a + a::before {
-  content: " · ";
-  color: #454542;
+.legal-nav a {
+  box-sizing: border-box;
+  display: inline-block;
+  width: fit-content;
+  min-height: 0;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  font: 500 13px/1.35 system-ui, sans-serif;
+  color: #d4d4ce;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.legal-nav a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.38);
+  color: #f4f4f1;
 }

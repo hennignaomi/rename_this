@@ -170,6 +170,42 @@ window.StoryLayers = (function () {
     return bounds;
   }
 
+  function getSatelliteInsertBeforeId() {
+    if (map.getLayer("mapbox-light-layer")) return "mapbox-light-layer";
+    var style = map.getStyle();
+    if (!style || !style.layers) return undefined;
+    for (var i = 0; i < style.layers.length; i += 1) {
+      var id = style.layers[i].id;
+      if (id.indexOf("story-") === 0) return id;
+    }
+    return undefined;
+  }
+
+  function setVectorBasemapOpacity(opacity, duration) {
+    var style = map.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach(function (layer) {
+      if (layer.id.indexOf("story-") === 0) return;
+      if (layer.id.indexOf("mapbox-") === 0) return;
+      var transition = { duration: duration == null ? 0 : duration };
+      if (layer.type === "fill") {
+        map.setPaintProperty(layer.id, "fill-opacity-transition", transition);
+        map.setPaintProperty(layer.id, "fill-opacity", opacity);
+      } else if (layer.type === "line") {
+        map.setPaintProperty(layer.id, "line-opacity-transition", transition);
+        map.setPaintProperty(layer.id, "line-opacity", opacity);
+      } else if (layer.type === "symbol") {
+        map.setPaintProperty(layer.id, "text-opacity-transition", transition);
+        map.setPaintProperty(layer.id, "icon-opacity-transition", transition);
+        map.setPaintProperty(layer.id, "text-opacity", opacity);
+        map.setPaintProperty(layer.id, "icon-opacity", opacity);
+      } else if (layer.type === "raster") {
+        map.setPaintProperty(layer.id, "raster-opacity-transition", transition);
+        map.setPaintProperty(layer.id, "raster-opacity", opacity);
+      }
+    });
+  }
+
   function ensureSatelliteLayer() {
     var token =
       typeof getMapboxAccessToken === "function" ? getMapboxAccessToken() : "";
@@ -184,6 +220,7 @@ window.StoryLayers = (function () {
       ],
       tileSize: 256,
     });
+    var beforeId = getSatelliteInsertBeforeId();
     map.addLayer(
       {
         id: "mapbox-satellite-layer",
@@ -191,7 +228,7 @@ window.StoryLayers = (function () {
         source: "mapbox-satellite",
         paint: { "raster-opacity": 0 },
       },
-      "mapbox-light-layer"
+      beforeId
     );
   }
 
@@ -199,17 +236,30 @@ window.StoryLayers = (function () {
     ensureSatelliteLayer();
     if (!map.getLayer("mapbox-satellite-layer")) return;
     var ms = duration == null ? 1200 : duration;
-    map.setPaintProperty("mapbox-light-layer", "raster-opacity-transition", {
-      duration: ms,
-    });
+    if (map.getLayer("mapbox-light-layer")) {
+      map.setPaintProperty("mapbox-light-layer", "raster-opacity-transition", {
+        duration: ms,
+      });
+      map.setPaintProperty("mapbox-satellite-layer", "raster-opacity-transition", {
+        duration: ms,
+      });
+      map.setPaintProperty(
+        "mapbox-light-layer",
+        "raster-opacity",
+        visible ? 0.15 : 1
+      );
+      map.setPaintProperty(
+        "mapbox-satellite-layer",
+        "raster-opacity",
+        visible ? 1 : 0
+      );
+      return;
+    }
+
     map.setPaintProperty("mapbox-satellite-layer", "raster-opacity-transition", {
       duration: ms,
     });
-    map.setPaintProperty(
-      "mapbox-light-layer",
-      "raster-opacity",
-      visible ? 0.15 : 1
-    );
+    setVectorBasemapOpacity(visible ? 0.12 : 1, ms);
     map.setPaintProperty(
       "mapbox-satellite-layer",
       "raster-opacity",

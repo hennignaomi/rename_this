@@ -4,18 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Impressum</title>
-  <link rel="stylesheet" href="./legal.css" />
+  <link rel="stylesheet" href="./legal.css?v=20260602" />
+  <style>
+    .legal-nav {
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .legal-nav a {
+      box-sizing: border-box;
+      display: inline-block;
+      width: fit-content;
+      padding: 2px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      font: 500 13px/1.35 system-ui, sans-serif;
+      color: #d4d4ce;
+      min-height: 0;
+    }
+  </style>
 </head>
 <body>
   <h1>Impressum</h1>
-  <p>mail[ät]naomihennig.com</p>
+  <p><a href="mailto:mail@naomihennig.com">mail@naomihennig.com</a></p>
   <p>Inhaltlich verantwortlich (§ 18 Abs. 2 MStV): Naomi Hennig</p>
   <p>Privates, nicht-kommerzielles Projekt. Quellcode: <a href="https://github.com/hennignaomi/rename_this" target="_blank" rel="noopener">github.com/hennignaomi/rename_this</a></p>
-  <p>Dieses Projekt wurde im Rahmen eines Praktikums bei CityLAB/ODIS (Open Data Informationsstelle)/Technologiestiftung Berlin realisiert.</p>
-  <p class="legal-nav">
+  <p>Dieses Projekt wurde im Rahmen eines Praktikums bei der ODIS (Open Data Informationsstelle) realisiert. ODIS ist ein Projekt der Technologiestiftung Berlin. Gefördert von der Senatskanzlei Berlin aus den Mitteln des Landes Berlin und kaufmännisch unterstützt durch die Investitionsbank Berlin.</p>
+  <nav class="legal-nav">
     <a href="./index.html">Zurück</a>
     <a href="./quellen.html">Quellen</a>
     <a href="./datenschutz.html">Datenschutz</a>
-  </p>
+  </nav>
 </body>
 </html>

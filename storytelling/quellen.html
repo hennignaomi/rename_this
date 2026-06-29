@@ -4,7 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quellen — Re:Name THIS!</title>
-  <link rel="stylesheet" href="./legal.css" />
+  <link rel="stylesheet" href="./legal.css?v=20260602" />
+  <style>
+    .legal-nav {
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .legal-nav a {
+      box-sizing: border-box;
+      display: inline-block;
+      width: fit-content;
+      padding: 2px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      font: 500 13px/1.35 system-ui, sans-serif;
+      color: #d4d4ce;
+      min-height: 0;
+    }
+  </style>
   <style>
     h2 {
       margin: 1.25rem 0 0.5rem;
@@ -70,10 +89,10 @@
     </li>
   </ul>
 
-  <p class="legal-nav">
+  <nav class="legal-nav">
     <a href="./index.html">Zurück</a>
     <a href="./impressum.html">Impressum</a>
     <a href="./datenschutz.html">Datenschutz</a>
-  </p>
+  </nav>
 </body>
 </html>
