@@ -187,6 +187,7 @@ window.StoryLayers = (function () {
     style.layers.forEach(function (layer) {
       if (layer.id.indexOf("story-") === 0) return;
       if (layer.id.indexOf("mapbox-") === 0) return;
+      if (layer.id === "satellite-imagery") return;
       var transition = { duration: duration == null ? 0 : duration };
       if (layer.type === "fill") {
         map.setPaintProperty(layer.id, "fill-opacity-transition", transition);
@@ -206,26 +207,25 @@ window.StoryLayers = (function () {
     });
   }
 
-  function ensureSatelliteLayer() {
-    var token =
-      typeof getMapboxAccessToken === "function" ? getMapboxAccessToken() : "";
-    if (!token || map.getSource("mapbox-satellite")) return;
+  var ESRI_SATELLITE_TILES = [
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  ];
 
-    var q = "access_token=" + encodeURIComponent(token);
-    map.addSource("mapbox-satellite", {
+  function ensureSatelliteLayer() {
+    if (map.getSource("satellite")) return;
+
+    map.addSource("satellite", {
       type: "raster",
-      tiles: [
-        "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/{z}/{x}/{y}?" +
-          q,
-      ],
+      tiles: ESRI_SATELLITE_TILES,
       tileSize: 256,
+      attribution: "",
     });
     var beforeId = getSatelliteInsertBeforeId();
     map.addLayer(
       {
-        id: "mapbox-satellite-layer",
+        id: "satellite-imagery",
         type: "raster",
-        source: "mapbox-satellite",
+        source: "satellite",
         paint: { "raster-opacity": 0 },
       },
       beforeId
@@ -234,13 +234,13 @@ window.StoryLayers = (function () {
 
   function setSatelliteVisible(visible, duration) {
     ensureSatelliteLayer();
-    if (!map.getLayer("mapbox-satellite-layer")) return;
+    if (!map.getLayer("satellite-imagery")) return;
     var ms = duration == null ? 1200 : duration;
     if (map.getLayer("mapbox-light-layer")) {
       map.setPaintProperty("mapbox-light-layer", "raster-opacity-transition", {
         duration: ms,
       });
-      map.setPaintProperty("mapbox-satellite-layer", "raster-opacity-transition", {
+      map.setPaintProperty("satellite-imagery", "raster-opacity-transition", {
         duration: ms,
       });
       map.setPaintProperty(
@@ -248,23 +248,18 @@ window.StoryLayers = (function () {
         "raster-opacity",
         visible ? 0.15 : 1
       );
-      map.setPaintProperty(
-        "mapbox-satellite-layer",
-        "raster-opacity",
-        visible ? 1 : 0
-      );
-      return;
+      map.setPaintProperty("satellite-imagery", "raster-opacity", visible ? 1 : 0);
+    } else {
+      map.setPaintProperty("satellite-imagery", "raster-opacity-transition", {
+        duration: ms,
+      });
+      setVectorBasemapOpacity(visible ? 0.12 : 1, ms);
+      map.setPaintProperty("satellite-imagery", "raster-opacity", visible ? 1 : 0);
     }
 
-    map.setPaintProperty("mapbox-satellite-layer", "raster-opacity-transition", {
-      duration: ms,
-    });
-    setVectorBasemapOpacity(visible ? 0.12 : 1, ms);
-    map.setPaintProperty(
-      "mapbox-satellite-layer",
-      "raster-opacity",
-      visible ? 1 : 0
-    );
+    if (typeof window.updateMapAttribution === "function") {
+      window.updateMapAttribution({ satellite: visible });
+    }
   }
 
   function applyLinePaint(layerId, lineColor, options) {

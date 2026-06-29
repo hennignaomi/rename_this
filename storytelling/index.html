@@ -85,59 +85,51 @@
             pointer-events: auto;
         }
 
-        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
-            margin: 0 16px 10px 0;
-            padding: 0;
-            border: none;
-            background: transparent;
-            backdrop-filter: none;
-            box-shadow: none;
-            font: 400 10px/1.35 "Barlow Condensed", system-ui, sans-serif;
+        #map-footer-controls {
+            position: absolute;
+            right: 16px;
+            bottom: 12px;
+            z-index: 61;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        #map-attribution {
+            max-width: min(320px, calc(100vw - 96px));
+            padding: 6px 10px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            font: 400 12px/1.35 "Barlow Condensed", system-ui, sans-serif;
             letter-spacing: 0.01em;
-            color: rgba(244, 244, 241, 0.46);
-            max-width: min(280px, 46vw);
+            color: rgba(20, 20, 18, 0.92);
             text-align: right;
+            white-space: nowrap;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 520ms ease, visibility 520ms ease;
         }
 
-        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a {
-            color: rgba(244, 244, 241, 0.52);
+        body:not(.map-active) #map-attribution {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
 
-        .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover {
-            color: rgba(244, 244, 241, 0.72);
+        #map-attribution a {
+            color: rgba(10, 10, 8, 0.92);
+            text-decoration: none;
         }
 
-        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib,
-        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
-            color: rgba(38, 38, 36, 0.52);
-        }
-
-        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a,
-        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a {
-            color: rgba(38, 38, 36, 0.58);
-        }
-
-        body.mapbox-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover,
-        body.basemap-de-basemap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib a:hover {
-            color: rgba(20, 20, 18, 0.78);
-        }
-
-        .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
-            display: none;
-        }
-
-        .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner,
-        .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
-            display: block !important;
-            margin: 0;
-            padding: 0;
+        #map-attribution a:hover {
+            color: rgba(0, 0, 0, 1);
+            text-decoration: underline;
         }
 
         #legal-controls {
-            position: fixed;
-            right: 16px;
-            bottom: 44px;
-            z-index: 60;
+            position: static;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
@@ -150,21 +142,20 @@
             height: 48px;
             margin: 0;
             padding: 0;
-            border: 1px solid rgba(255, 255, 255, 0.38);
+            border: none;
             border-radius: 999px;
-            background: rgba(10, 12, 14, 0.92);
-            backdrop-filter: blur(10px);
-            color: #fff;
+            background: rgba(255, 255, 255, 0.5);
+            color: rgba(38, 38, 36, 0.88);
             font: 700 22px/1 "Barlow Condensed", system-ui, sans-serif;
             cursor: pointer;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
-            transition: background 180ms ease, border-color 180ms ease, transform 120ms ease;
+            box-shadow: none;
+            transition: background 180ms ease, color 180ms ease, transform 120ms ease;
         }
 
         #legal-controls-toggle:hover,
         #legal-controls-toggle[aria-expanded="true"] {
-            background: rgba(28, 30, 34, 0.96);
-            border-color: rgba(255, 255, 255, 0.58);
+            background: rgba(255, 255, 255, 0.62);
+            color: rgba(20, 20, 18, 0.96);
         }
 
         #legal-controls-toggle:active {
@@ -1015,13 +1006,16 @@
             <button type="button" id="map-zoom-in" title="Hineinzoomen" aria-label="Hineinzoomen">+</button>
             <button type="button" id="map-zoom-out" title="Herauszoomen" aria-label="Herauszoomen">−</button>
         </nav>
-        <nav id="legal-controls" aria-label="Rechtliches">
-            <div id="legal-controls-panel">
-                <a href="./impressum.html">Impressum</a>
-                <a href="./datenschutz.html">Datenschutz</a>
-            </div>
-            <button type="button" id="legal-controls-toggle" aria-expanded="false" aria-controls="legal-controls-panel" title="Impressum und Datenschutz" aria-label="Impressum und Datenschutz">i</button>
-        </nav>
+        <div id="map-footer-controls">
+            <div id="map-attribution" aria-label="Kartenquellen"></div>
+            <nav id="legal-controls" aria-label="Rechtliches">
+                <div id="legal-controls-panel">
+                    <a href="./impressum.html">Impressum</a>
+                    <a href="./datenschutz.html">Datenschutz</a>
+                </div>
+                <button type="button" id="legal-controls-toggle" aria-expanded="false" aria-controls="legal-controls-panel" title="Impressum und Datenschutz" aria-label="Impressum und Datenschutz">i</button>
+            </nav>
+        </div>
     </div>
     <div id="map-shell">
         <div id="map"></div>
@@ -1041,7 +1035,7 @@
     <div id="story"></div>
 
     <script src="./config.local.js" onerror="console.error('Missing config.local.js — copy config.local.example.js and add your Mapbox token.')"></script>
-    <script src="./config.js?v=20260602g"></script>
+    <script src="./config.js?v=20260602h"></script>
     <script src="./story-layers.js?v=20260624f"></script>
     <script>
         var layerTypes = {
@@ -1598,7 +1592,7 @@
                         type: 'raster',
                         tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
                         tileSize: 256,
-                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                        attribution: ''
                     });
                 }
 
@@ -2862,7 +2856,43 @@
 
         var map = new maplibregl.Map(mapOptions);
 
-        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+        function updateMapAttribution(options) {
+            var el = document.getElementById('map-attribution');
+            if (!el) return;
+
+            var attrs = typeof MAP_ATTRIBUTIONS !== 'undefined'
+                ? MAP_ATTRIBUTIONS
+                : {
+                    basemapde: {
+                        short: '&copy; <a href="https://basemap.de/" target="_blank" rel="noopener">basemap.de</a> / <a href="https://www.bkg.bund.de/" target="_blank" rel="noopener">BKG</a>'
+                    },
+                    esri: {
+                        short: '&copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>'
+                    },
+                    mapbox: {
+                        short: '&copy; <a href="https://www.mapbox.com/" target="_blank" rel="noopener">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                    }
+                };
+
+            var satellite = options && options.satellite;
+            var provider = (typeof config !== 'undefined' && config.basemapProvider) || 'basemapde';
+            var parts = [];
+
+            if (provider === 'basemapde') {
+                parts.push(attrs.basemapde.short);
+            } else if (provider === 'mapbox') {
+                parts.push(attrs.mapbox.short);
+            }
+
+            if (satellite) {
+                parts.push(attrs.esri.short);
+            }
+
+            el.innerHTML = parts.join(' · ');
+        }
+
+        window.updateMapAttribution = updateMapAttribution;
+        updateMapAttribution({ satellite: false });
 
         function bindLegalControls() {
             var toggle = document.getElementById('legal-controls-toggle');

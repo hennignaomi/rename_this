@@ -65,6 +65,28 @@ function buildMapboxRasterStyle(token) {
 /** "mapbox" | "basemapde" — set to basemapde to try the BKG basemap.de Web Vektor service. */
 var BASEMAP_PROVIDER = "basemapde";
 
+/** Short strings for the map overlay; long forms live on quellen.html. */
+var MAP_ATTRIBUTIONS = {
+  basemapde: {
+    short:
+      '&copy; <a href="https://basemap.de/" target="_blank" rel="noopener">basemap.de</a> / <a href="https://www.bkg.bund.de/" target="_blank" rel="noopener">BKG</a>',
+    long:
+      "&copy; 2026 basemap.de / BKG | Datenquellen: &copy; GeoBasis-DE",
+  },
+  esri: {
+    short:
+      '&copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>',
+    long:
+      "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+  },
+  mapbox: {
+    short:
+      '&copy; <a href="https://www.mapbox.com/" target="_blank" rel="noopener">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+    long:
+      '&copy; <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  },
+};
+
 /** basemap.de viewer styleID → MapLibre style JSON (1=Farbe, 2=Relief, 3=Grau). */
 var BASEMAPDE_STYLE_URLS = {
   1: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_col.json",
